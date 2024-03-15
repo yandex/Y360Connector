@@ -1,0 +1,105 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.2092
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Y360OutlookConnector", "Y360OutlookConnector\Y360OutlookConnector.csproj", "{128B5DE2-B859-4E50-AF25-485AFD12E0A5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB} = {8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}
+		{76C932E7-ECA5-4010-B602-2104327EE5EE} = {76C932E7-ECA5-4010-B602-2104327EE5EE}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenSync", "CalDavSynchronizer\GenSync\GenSync.csproj", "{76C932E7-ECA5-4010-B602-2104327EE5EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyCalDavSynchronizer", "TinyCalDavSynchronizer\TinyCalDavSynchronizer.csproj", "{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{76C932E7-ECA5-4010-B602-2104327EE5EE} = {76C932E7-ECA5-4010-B602-2104327EE5EE}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CalDavSynchronizer", "CalDavSynchronizer", "{9FD0F453-A05F-4475-A73F-3F270ACD63C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Thought.vCards", "CalDavSynchronizer\Thought.vCards\Thought.vCards.csproj", "{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CalDavSynchronizer.Conversions", "CalDavSynchronizer\CalDavSynchronizer.Conversions\CalDavSynchronizer.Conversions.csproj", "{71021DE1-8DC8-4414-AF56-FE821DD92F47}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "Y360OutlookConnector.Setup", "Y360OutlookConnector.Setup\Y360OutlookConnector.Setup.wixproj", "{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5} = {128B5DE2-B859-4E50-AF25-485AFD12E0A5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Y360OutlookConnector.Setup.CA", "Y360OutlookConnector.Setup.CA\Y360OutlookConnector.Setup.CA.vcxproj", "{2919D588-EF39-4203-9288-92D57D8BC6CD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Debug|x86.Build.0 = Debug|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Release|x86.ActiveCfg = Release|Any CPU
+		{128B5DE2-B859-4E50-AF25-485AFD12E0A5}.Release|x86.Build.0 = Release|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Debug|x86.Build.0 = Debug|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Release|x86.ActiveCfg = Release|Any CPU
+		{76C932E7-ECA5-4010-B602-2104327EE5EE}.Release|x86.Build.0 = Release|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Debug|x86.Build.0 = Debug|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Release|x86.ActiveCfg = Release|Any CPU
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}.Release|x86.Build.0 = Release|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Debug|x86.Build.0 = Debug|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Release|x86.ActiveCfg = Release|Any CPU
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}.Release|x86.Build.0 = Release|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Debug|x86.Build.0 = Debug|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Release|x86.ActiveCfg = Release|Any CPU
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47}.Release|x86.Build.0 = Release|Any CPU
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Debug|x86.ActiveCfg = Debug|x86
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Debug|x86.Build.0 = Debug|x86
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Release|Any CPU.ActiveCfg = Release|x86
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Release|x86.ActiveCfg = Release|x86
+		{FD48EFFE-CFFC-4E8D-9163-EA159AB718F9}.Release|x86.Build.0 = Release|x86
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Debug|x86.ActiveCfg = Debug|Win32
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Debug|x86.Build.0 = Debug|Win32
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|Any CPU.ActiveCfg = Release|Win32
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|x86.ActiveCfg = Release|Win32
+		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{76C932E7-ECA5-4010-B602-2104327EE5EE} = {9FD0F453-A05F-4475-A73F-3F270ACD63C5}
+		{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB} = {9FD0F453-A05F-4475-A73F-3F270ACD63C5}
+		{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF} = {9FD0F453-A05F-4475-A73F-3F270ACD63C5}
+		{71021DE1-8DC8-4414-AF56-FE821DD92F47} = {9FD0F453-A05F-4475-A73F-3F270ACD63C5}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CA120AC1-C5C0-47E1-BAB4-C839AA3FC161}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<WixLocalization Culture="en-US" Codepage="1252" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+    <String Id="RestartOutlookDialog_Message">The installation was completed successfully. However, Outlook needs to be restarted for the changes to take effect</String>
+    <String Id="RestartOutlookDialog_Button">Restart Outlook</String>
+</WixLocalization>

@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AboutWindow_CopyrightText" xml:space="preserve">
+    <value>© Y360 Connector, 2024. All rights reserved</value>
+  </data>
+  <data name="AboutWindow_LicenseAgreement" xml:space="preserve">
+    <value>License Agreement</value>
+  </data>
+  <data name="AboutWindow_NewVersionString" xml:space="preserve">
+    <value>Update available — it will be applied when you restart Outlook.</value>
+  </data>
+  <data name="AboutWindow_UpdateNowButton" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="AboutWindow_VersionString" xml:space="preserve">
+    <value>Version {0} ({1})</value>
+  </data>
+  <data name="AboutWindow_WindowTitle" xml:space="preserve">
+    <value>Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="AutoUpdateWindow_UpdateAvailableDescription" xml:space="preserve">
+    <value>It will be applied when you restart Outlook.</value>
+  </data>
+  <data name="AutoUpdateWindow_UpdateAvailableMessage" xml:space="preserve">
+    <value>Y360&#160;Connector&#160;CalDAV/CardDAV updated</value>
+  </data>
+  <data name="AutoUpdateWindow_UpdateButton" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="AutoUpdateWindow_WindowTitle" xml:space="preserve">
+    <value>Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="LoginWindow_AuthCodePageDesc" xml:space="preserve">
+    <value>To log in to your account, enter the confirmation code from your browser</value>
+  </data>
+  <data name="LoginWindow_AuthCodePageFailure" xml:space="preserve">
+    <value>Incorrect. Please check the code you entered</value>
+  </data>
+  <data name="LoginWindow_AuthCodePageTitle" xml:space="preserve">
+    <value>Don't close this window</value>
+  </data>
+  <data name="LoginWindow_WindowTitle" xml:space="preserve">
+    <value>Log in — Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="Messages_LoginWebViewFailureDescription" xml:space="preserve">
+    <value>Try again or use a different login method in your browser</value>
+  </data>
+  <data name="Messages_LoginWebViewFailureOpenBrowser" xml:space="preserve">
+    <value>Open browser</value>
+  </data>
+  <data name="Messages_LoginWebViewFailureTitle" xml:space="preserve">
+    <value>Couldn't log in to Yandex ID</value>
+  </data>
+  <data name="Messages_LoginWebViewFailureTryAgain" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Messages_NoInternetMessageDesc" xml:space="preserve">
+    <value>You need internet access to sync and get updates. Try again later.</value>
+  </data>
+  <data name="Messages_NoInternetMessageTitle" xml:space="preserve">
+    <value>No internet connection</value>
+  </data>
+  <data name="Messages_ProductDescription" xml:space="preserve">
+    <value>Outlook extension that syncs your calendars, tasks, and contacts with Yandex 360 using the CalDAV and CardDAV protocols.</value>
+  </data>
+  <data name="Messages_ProductName" xml:space="preserve">
+    <value>Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="Messages_ProxyErrorMessageButton" xml:space="preserve">
+    <value>Configure a proxy</value>
+  </data>
+  <data name="Messages_ProxyErrorMessageDescription" xml:space="preserve">
+    <value>Couldn't connect to the proxy server. Make sure the proxy URL, name, and password are correct.</value>
+  </data>
+  <data name="Messages_ProxyErrorMessageTitle" xml:space="preserve">
+    <value>Syncing doesn't work</value>
+  </data>
+  <data name="Messages_SyncFailureMessageDescription" xml:space="preserve">
+    <value>Server error occured. We're working to fix it. Once it's fixed, data exchange will resume automatically.</value>
+  </data>
+  <data name="Messages_SyncFailureMessageTitle" xml:space="preserve">
+    <value>Syncing doesn't work</value>
+  </data>
+  <data name="Messages_SyncProgressCalendars" xml:space="preserve">
+    <value>Syncing calendars and events</value>
+  </data>
+  <data name="Messages_SyncProgressContacts" xml:space="preserve">
+    <value>Syncing contacts</value>
+  </data>
+  <data name="Messages_SyncProgressTasks" xml:space="preserve">
+    <value>Syncing tasks</value>
+  </data>
+  <data name="Messages_UnauthorizedMessageButton" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Messages_UnauthorizedMessageDescription" xml:space="preserve">
+    <value>To start syncing, log in with your Yandex ID</value>
+  </data>
+  <data name="SettingsWindow_ApplyButton" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="SettingsWindow_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SettingsWindow_LogClearLink" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="SettingsWindow_LogPanelDescription" xml:space="preserve">
+    <value>Program log data</value>
+  </data>
+  <data name="SettingsWindow_LogPanelTitle" xml:space="preserve">
+    <value>Event log</value>
+  </data>
+  <data name="SettingsWindow_LogShowLink" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="SettingsWindow_LogShowWarning" xml:space="preserve">
+    <value>The log file can contain personal data: network paths, calendar or address book data. To keep this data secure, delete it when sending the log via email and never share the log in the public domains, such as forums or social networks.</value>
+  </data>
+  <data name="SettingsWindow_LoginButton" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="SettingsWindow_LogoutButton" xml:space="preserve">
+    <value>Log out</value>
+  </data>
+  <data name="SettingsWindow_ProxyErrorLogin" xml:space="preserve">
+    <value>Syncing doesn't work. Invalid username or password</value>
+  </data>
+  <data name="SettingsWindow_ProxyErrorServer" xml:space="preserve">
+    <value>Syncing doesn't work. Invalid URL</value>
+  </data>
+  <data name="SettingsWindow_ProxyManualSettings" xml:space="preserve">
+    <value>Configure manually</value>
+  </data>
+  <data name="SettingsWindow_ProxyPanelDescription" xml:space="preserve">
+    <value>System settings are used by default</value>
+  </data>
+  <data name="SettingsWindow_ProxyPanelTitle" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="SettingsWindow_ProxyPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="SettingsWindow_ProxyUrlErrorEmpty" xml:space="preserve">
+    <value>You need to fill in this field</value>
+  </data>
+  <data name="SettingsWindow_ProxyUrlErrorInvalidValue" xml:space="preserve">
+    <value>Invalid value</value>
+  </data>
+  <data name="SettingsWindow_ProxyUrlErrorNonHttp" xml:space="preserve">
+    <value>Only HTTP proxies are supported</value>
+  </data>
+  <data name="SettingsWindow_ProxyUrlLabel" xml:space="preserve">
+    <value>Proxy URL (required)</value>
+  </data>
+  <data name="SettingsWindow_ProxyUserName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="SettingsWindow_UserLogoutDesc" xml:space="preserve">
+    <value>You need to log in to your account</value>
+  </data>
+  <data name="SettingsWindow_WindowTitle" xml:space="preserve">
+    <value>Settings — Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="SyncConfigWindow_ApplyButton" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="SyncConfigWindow_CalendarsFolderType" xml:space="preserve">
+    <value>Events</value>
+  </data>
+  <data name="SyncConfigWindow_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SyncConfigWindow_ContactsDefaultName" xml:space="preserve">
+    <value>Contacts</value>
+  </data>
+  <data name="SyncConfigWindow_ContactsFolderType" xml:space="preserve">
+    <value>Contacts</value>
+  </data>
+  <data name="SyncConfigWindow_ExternalContactsName" xml:space="preserve">
+    <value>External</value>
+  </data>
+  <data name="SyncConfigWindow_FolderAlreadyUsedByCalendarMessage" xml:space="preserve">
+    <value>The "{0}" calendar is already synced with this folder.
+Select a different folder</value>
+  </data>
+  <data name="SyncConfigWindow_FolderAlreadyUsedByContacsMessage" xml:space="preserve">
+    <value>The "{0}" contacts are already synced with this folder.
+Select a different folder</value>
+  </data>
+  <data name="SyncConfigWindow_FolderAlreadyUsedByTasksMessage" xml:space="preserve">
+    <value>The "{0}" tasks are already synced with this folder.
+Select a different folder</value>
+  </data>
+  <data name="SyncConfigWindow_FoldersColumnName" xml:space="preserve">
+    <value>Outlook</value>
+  </data>
+  <data name="SyncConfigWindow_PersonalContactsName" xml:space="preserve">
+    <value>Personal</value>
+  </data>
+  <data name="SyncConfigWindow_PrimaryLabel" xml:space="preserve">
+    <value>main</value>
+  </data>
+  <data name="SyncConfigWindow_ProxySettingsLink" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SyncConfigWindow_ReadOnlyTooltip" xml:space="preserve">
+    <value>Read-only</value>
+  </data>
+  <data name="SyncConfigWindow_ServerColumnName" xml:space="preserve">
+    <value>Yandex</value>
+  </data>
+  <data name="SyncConfigWindow_SharedContactsName" xml:space="preserve">
+    <value>Shared</value>
+  </data>
+  <data name="SyncConfigWindow_SyncFailureGeneralError" xml:space="preserve">
+    <value>One or more errors occurred during the last syncing</value>
+  </data>
+  <data name="SyncConfigWindow_SyncFailureProxyError" xml:space="preserve">
+    <value>Syncing doesn't work. Configure a proxy</value>
+  </data>
+  <data name="SyncConfigWindow_SyncFailureServerError" xml:space="preserve">
+    <value>Syncing doesn't work. Server error</value>
+  </data>
+  <data name="SyncConfigWindow_SyncSuccess" xml:space="preserve">
+    <value>Synced</value>
+  </data>
+  <data name="SyncConfigWindow_TasksFolderType" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="SyncConfigWindow_WindowTitle" xml:space="preserve">
+    <value>Events, tasks, and contacts — Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="SyncConfigWindow_WrongFolderTypeForCalendarMessage" xml:space="preserve">
+    <value>You can't select this folder. 
+Select a folder with elements of the "Calendar" type</value>
+  </data>
+  <data name="SyncConfigWindow_WrongFolderTypeForContactsMessage" xml:space="preserve">
+    <value>You can't select this folder. 
+Select a folder with elements of the "Contacts" type</value>
+  </data>
+  <data name="SyncConfigWindow_WrongFolderTypeForTasksMessage" xml:space="preserve">
+    <value>You can't select this folder. 
+Select a folder with elements of the "Tasks" type</value>
+  </data>
+  <data name="SyncConfigWindow_СreatingFolderErrorMessage" xml:space="preserve">
+    <value>Unable to create "{0}"</value>
+  </data>
+  <data name="Toolbar_AboutButton" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Toolbar_HelpButton" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="Toolbar_LoginButton" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Toolbar_RibbonGroup" xml:space="preserve">
+    <value>Y360 Connector CalDAV/CardDAV</value>
+  </data>
+  <data name="Toolbar_RibbonTab" xml:space="preserve">
+    <value>Y360 Connector</value>
+  </data>
+  <data name="Toolbar_SettingsButton" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Toolbar_SyncNowButton" xml:space="preserve">
+    <value>Sync</value>
+  </data>
+  <data name="Toolbar_SyncNowButtonRunning" xml:space="preserve">
+    <value>Syncing</value>
+  </data>
+  <data name="Toolbar_SyncTargetsButton" xml:space="preserve">
+    <value>Events, tasks, and contacts</value>
+  </data>
+</root>

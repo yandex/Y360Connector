@@ -1,0 +1,3 @@
+[submodule "CalDavSynchronizer"]
+	path = CalDavSynchronizer
+	url = https://github.com/aluxnimm/outlookcaldavsynchronizer

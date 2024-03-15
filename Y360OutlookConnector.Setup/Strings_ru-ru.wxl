@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<WixLocalization Culture="ru-RU" Codepage="1251" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+    <String Id="RestartOutlookDialog_Message">Установка была успешно завершена. Однако, чтобы изменения вступили в силу, Outlook необходимо перезапустить</String>
+    <String Id="RestartOutlookDialog_Button">Перезапустить Outlook</String>
+</WixLocalization>

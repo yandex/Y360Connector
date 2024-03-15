@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+
+        <Component Id="RuResComponent" Directory="RuResDir" Guid="530A33AC-0225-4D16-AD45-FDEDFC712714">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="RuResComponent" Value="Installed" Type="string" KeyPath="yes"  />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveRuResDir" Directory="RuResDir" On="uninstall" />
+            <File Id="ru_ru.Resources.dll" Source="$(var.BinOutputDir)\ru-RU\Y360OutlookConnector.resources.dll" />
+
+        </Component>
+
+        <Component Id="EnResComponent" Directory="EnResDir" Guid="C77AE39D-57EF-4850-B9E0-4960F0070B4C">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="EnResComponent" Value="Installed" Type="string" KeyPath="yes"  />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveEnResDir" Directory="EnResDir" On="uninstall" />
+            <File Id="en_us.Resources.dll" Source="$(var.BinOutputDir)\en-US\Y360OutlookConnector.resources.dll" />
+
+        </Component>
+
+        <Component Id="MainComponent" Directory="FilesRoot" Guid="0B4E177A-7478-4661-8221-8ED4D7ED0EE1">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="MainComponent" Value="Installed" Type="string" KeyPath="yes"  />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveInstallDir" Directory="INSTALLFOLDER" On="uninstall" />
+            <RemoveFolder Id="RemoveYandexDir" Directory="Yandex" On="uninstall" />
+            <RemoveFolder Id="RemoveRootDir" Directory="FilesRoot" On="uninstall" />
+
+            <File Source="$(var.BinOutputDir)\Y360OutlookConnector.dll"  />
+            <File Source="$(var.BinOutputDir)\Y360OutlookConnector.dll.manifest" />
+            <File Source="$(var.BinOutputDir)\Y360OutlookConnector.dll.config" />
+            <File Source="$(var.BinOutputDir)\Y360OutlookConnector.vsto" />
+
+            <File Source="$(var.BinOutputDir)\TinyCalDavSynchronizer.dll" />
+            <File Source="$(var.BinOutputDir)\GenSync.dll" />
+            <File Source="$(var.BinOutputDir)\CalDavSynchronizer.Conversions.dll" />
+
+            <File Source="$(var.BinOutputDir)\NodaTime.dll" />
+            <File Source="$(var.BinOutputDir)\Newtonsoft.Json.dll" />
+            <File Source="$(var.BinOutputDir)\log4net.dll" />
+            <File Source="$(var.BinOutputDir)\DDay.iCal.dll" />
+            <File Source="$(var.BinOutputDir)\ColorMineStandard.dll" />
+            <File Source="$(var.BinOutputDir)\Yandex.Metrica.NET.dll" />
+            <File Source="$(var.BinOutputDir)\Thought.vCards.dll" />
+
+            <File Source="$(var.BinOutputDir)\System.Runtime.CompilerServices.Unsafe.dll" />
+            <File Source="$(var.BinOutputDir)\Microsoft.Office.Tools.Outlook.v4.0.Utilities.dll" />
+            <File Source="$(var.BinOutputDir)\Microsoft.Office.Tools.Common.v4.0.Utilities.dll" />
+        </Component>
+
+    </Fragment>
+</Wix>

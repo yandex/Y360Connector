@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TinyCalDavSynchronizer</RootNamespace>
+    <AssemblyName>TinyCalDavSynchronizer</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ColorMineStandard">
+      <HintPath>..\ThirdParty\ColorMineStandard.dll</HintPath>
+    </Reference>
+    <Reference Include="DDay.iCal">
+      <HintPath>..\ThirdParty\DDay.iCal.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Outlook, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Factories.cs" />
+    <Compile Include="OutlookUtility.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Stubs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\IOutlookSession.cs">
+      <Link>IOutlookSession.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\OutlookCategory.cs">
+      <Link>OutlookCategory.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\OutlookSession.cs">
+      <Link>OutlookSession.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\CreateCategoryResult.cs">
+      <Link>CreateCategoryResult.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\IOutlookAccountPasswordProvider.cs">
+      <Link>IOutlookAccountPasswordProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Ui\OutlookFolderDescriptor.cs">
+      <Link>Ui\OutlookFolderDescriptor.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Ui\ConnectionTests\AccessPrivileges.cs">
+      <Link>Ui\ConnectionTests\AccessPrivileges.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Ui\ConnectionTests\CalendarOwnerProperties.cs">
+      <Link>Ui\ConnectionTests\CalendarOwnerProperties.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\ChangeWatching\**\*.*">
+      <Link>ChangeWatching\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\AccountServerSettings.cs">
+      <Link>Contracts\AccountServerSettings.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\DistributionListType.cs">
+      <Link>Contracts\DistributionListType.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\ColorCategoryMapping.cs">
+      <Link>Contracts\ColorCategoryMapping.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\PropertyMapping.cs">
+      <Link>Contracts\PropertyMapping.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\EventMappingConfiguration.cs">
+      <Link>Contracts\EventMappingConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\ContactMappingConfiguration.cs">
+      <Link>Contracts\ContactMappingConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\IPropertyMappingConfiguration.cs">
+      <Link>Contracts\IPropertyMappingConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\MappingConfigurationBase.cs">
+      <Link>Contracts\MappingConfigurationBase.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\ProxyOptions.cs">
+      <Link>Contracts\ProxyOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\ServerAdapterType.cs">
+      <Link>Contracts\ServerAdapterType.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\TaskMappingConfiguration.cs">
+      <Link>Contracts\TaskMappingConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\IMappingConfigurationViewModelFactory.cs">
+      <Link>Contracts\IMappingConfigurationViewModelFactory.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Contracts\ReminderMapping.cs">
+      <Link>Contracts\ReminderMapping.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\AddressBookData.cs">
+      <Link>DataAccess\AddressBookData.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\CalDavDataAccess.cs">
+      <Link>DataAccess\CalDavDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\CalDavResources.cs">
+      <Link>DataAccess\CalDavResources.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\CardDavDataAccess.cs">
+      <Link>DataAccess\CardDavDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\CalendarData.cs">
+      <Link>DataAccess\CalendarData.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\HttpUtility.cs">
+      <Link>DataAccess\HttpUtility.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\TaskListData.cs">
+      <Link>DataAccess\TaskListData.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\FileDataAccess.cs">
+      <Link>DataAccess\FileDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\HttpClientBasedClient\HttpResponseHeadersAdapter.cs">
+      <Link>DataAccess\HttpClientBasedClient\HttpResponseHeadersAdapter.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\WebDavClientBase.cs">
+      <Link>DataAccess\WebDavClientBase.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\ICalDavDataAccess.cs">
+      <Link>DataAccess\ICalDavDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\ICardDavDataAccess.cs">
+      <Link>DataAccess\ICardDavDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\IColorMappingsDataAccess.cs">
+      <Link>DataAccess\IColorMappingsDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\IHttpHeaders.cs">
+      <Link>DataAccess\IHttpHeaders.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\IWebDavClient.cs">
+      <Link>DataAccess\IWebDavClient.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\RemoveInvalidXmlCharacterStreamReader.cs">
+      <Link>DataAccess\RemoveInvalidXmlCharacterStreamReader.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\WebResourceName.cs">
+      <Link>DataAccess\WebResourceName.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\WebDavDataAccess.cs">
+      <Link>DataAccess\WebDavDataAccess.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\WebDavClientException.cs">
+      <Link>DataAccess\WebDavClientException.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DataAccess\XmlDocumentWithNamespaceManager.cs">
+      <Link>DataAccess\XmlDocumentWithNamespaceManager.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Scheduling\DateTimeEqualityComparer.cs">
+      <Link>Scheduling\DateTimeEqualityComparer.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\*.*">
+      <Link>Implementation\%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\CommonEntityMapper.cs">
+      <Link>Implementation\Common\CommonEntityMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IQueryOutlookAppointmentItemFolderStrategy.cs">
+      <Link>Implementation\Common\IQueryOutlookAppointmentItemFolderStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IQueryOutlookContactItemFolderStrategy.cs">
+      <Link>Implementation\Common\IQueryOutlookContactItemFolderStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IQueryOutlookFolderStrategy.cs">
+      <Link>Implementation\Common\IQueryOutlookFolderStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IQueryOutlookDistListItemFolderStrategy.cs">
+      <Link>Implementation\Common\IQueryOutlookDistListItemFolderStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IQueryOutlookTaskItemFolderStrategy.cs">
+      <Link>Implementation\Common\IQueryOutlookTaskItemFolderStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\IOutlookTimeZones.cs">
+      <Link>Implementation\Common\IOutlookTimeZones.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\OutlookTimeZones.cs">
+      <Link>Implementation\Common\OutlookTimeZones.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Common\QueryOutlookFolderByGetTableStrategy.cs">
+      <Link>Implementation\Common\QueryOutlookFolderByGetTableStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\ComWrappers\**\*.*">
+      <Link>Implementation\ComWrappers\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Contacts\**\*.*">
+      <Link>Implementation\Contacts\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\DistributionLists\**\*.*">
+      <Link>Implementation\DistributionLists\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Events\**\*.*">
+      <Link>Implementation\Events\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\Tasks\**\*.*">
+      <Link>Implementation\Tasks\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\TimeRangeFiltering\**\*.*">
+      <Link>Implementation\TimeRangeFiltering\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Implementation\TimeZones\**\*.*">
+      <Link>Implementation\TimeZones\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\DDayICalWorkaround\**\*.*">
+      <Link>DDayICalWorkaround\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Diagnostics\**\*.*">
+      <Link>Diagnostics\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Synchronization\**\*.*">
+      <Link>Synchronization\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\Utilities\**\*.*">
+      <Link>Utilities\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\CalDavSynchronizer\CalDavSynchronizer\ThoughtvCardWorkaround\**\*.*">
+      <Link>ThoughtvCardWorkaround\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CalDavSynchronizer\CalDavSynchronizer.Conversions\CalDavSynchronizer.Conversions.csproj">
+      <Project>{71021de1-8dc8-4414-af56-fe821dd92f47}</Project>
+      <Name>CalDavSynchronizer.Conversions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CalDavSynchronizer\GenSync\GenSync.csproj">
+      <Project>{76c932e7-eca5-4010-b602-2104327ee5ee}</Project>
+      <Name>GenSync</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CalDavSynchronizer\Thought.vCards\Thought.vCards.csproj">
+      <Project>{a53d3ceb-f7af-41ab-aa04-4d3cf684bbaf}</Project>
+      <Name>Thought.vCards</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="log4net">
+      <Version>2.0.15</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>13.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="NodaTime">
+      <Version>3.1.6</Version>
+    </PackageReference>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
+      <Version>4.7.1</Version>
+    </PackageReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

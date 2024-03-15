@@ -1,0 +1,6 @@
+The following authors have created the source code of "Y360 Connector CalDAV/CardDAV"
+published and distributed by YANDEX LLC as the owner:
+
+Alexander Bugrinov <bugrinov@yandex-team.ru>
+Aleksandr Ponkratov <sponkratov@yandex-team.ru>
+Vadim Chivichilov <chivichilov@yandex-team.ru>

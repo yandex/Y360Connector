@@ -1,0 +1,26 @@
+<UserControl x:Class="Y360OutlookConnector.Ui.Login.ConfirmationCodePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Y360OutlookConnector.Ui.Login"
+             xmlns:l10n="clr-namespace:Y360OutlookConnector.Localization"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Vertical">
+        <Image Source="/Y360OutlookConnector;component/Resources/AppLogo.png" 
+               Width="120" Height="120"
+               Margin="30"/>
+        <TextBlock FontSize="24px" FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Text="{x:Static l10n:Strings.LoginWindow_AuthCodePageTitle}"/>
+        <TextBlock HorizontalAlignment="Center" FontSize="16px" 
+                   TextWrapping="Wrap"
+                   Text="{x:Static l10n:Strings.LoginWindow_AuthCodePageDesc}" />
+        <local:SevenDigitsBox x:Name="SevenDigitsBox" Margin="20" />
+        <TextBlock HorizontalAlignment="Center" FontSize="16px"
+                   x:Name="ErrorMessage"
+                   Foreground="#FF3737" Visibility="Hidden"
+                   Text="{x:Static l10n:Strings.LoginWindow_AuthCodePageFailure}" />
+    </StackPanel>
+</UserControl>

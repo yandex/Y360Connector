@@ -1,0 +1,498 @@
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!--
+    This section defines project-level properties.
+
+    AssemblyName
+      Name of the output assembly.
+    Configuration
+      Specifies a default value for debug.
+    OutputType
+      Must be "Library" for VSTO.
+    Platform
+      Specifies what CPU the output of this project can run on.
+    NoStandardLibraries
+      Set to "false" for VSTO.
+    RootNamespace
+      In C#, this specifies the namespace given to new files. In VB, all objects are
+      wrapped in this namespace at runtime.
+  -->
+  <PropertyGroup>
+    <ProjectTypeGuids>{BAA0C2D2-18E2-41B9-852F-F413020CAA33};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{128B5DE2-B859-4E50-AF25-485AFD12E0A5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <RootNamespace>Y360OutlookConnector</RootNamespace>
+    <AssemblyName>Y360OutlookConnector</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <DefineConstants>VSTO40</DefineConstants>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <PublishUrl>publish\</PublishUrl>
+    <InstallUrl />
+    <TargetCulture>en</TargetCulture>
+    <ApplicationVersion>1.0.0.0</ApplicationVersion>
+    <AutoIncrementApplicationRevision>false</AutoIncrementApplicationRevision>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>days</UpdateIntervalUnits>
+    <IsWebBootstrapper>False</IsWebBootstrapper>
+    <ProductName>Y360OutlookConnector</ProductName>
+    <PublisherName />
+    <SupportUrl />
+    <FriendlyName>Y360OutlookConnector</FriendlyName>
+    <OfficeApplicationDescription />
+    <LoadBehavior>3</LoadBehavior>
+  </PropertyGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.VSTORuntime.4.0">
+      <Visible>False</Visible>
+      <ProductName>Microsoft Visual Studio 2010 Tools for Office Runtime %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <PropertyGroup>
+    <!--
+      OfficeApplication
+        Add-in host application
+    -->
+    <OfficeApplication>Outlook</OfficeApplication>
+  </PropertyGroup>
+  <!--
+    This section defines properties that are set when the "Debug" configuration is selected.
+
+    DebugSymbols
+      If "true", create symbols (.pdb). If "false", do not create symbols.
+    DefineConstants
+      Constants defined for the preprocessor.
+    EnableUnmanagedDebugging
+      If "true", starting the debugger will attach both managed and unmanaged debuggers.
+    Optimize
+      If "true", optimize the build output. If "false", do not optimize.
+    OutputPath
+      Output path of project relative to the project file.
+    WarningLevel
+      Warning level for the compiler.
+  -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <!--
+    This section defines properties that are set when the "Release" configuration is selected.
+
+    DebugSymbols
+      If "true", create symbols (.pdb). If "false", do not create symbols.
+    DefineConstants
+      Constants defined for the preprocessor.
+    EnableUnmanagedDebugging
+      If "true", starting the debugger will attach both managed and unmanaged debuggers.
+    Optimize
+      If "true", optimize the build output. If "false", do not optimize.
+    OutputPath
+      Output path of project relative to the project file.
+    WarningLevel
+      Warning level for the compiler.
+  -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <!--
+    This section specifies references for the project.
+  -->
+  <ItemGroup>
+    <Reference Include="Accessibility" />
+    <Reference Include="DDay.iCal, Version=1.0.2.575, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\ThirdParty\DDay.iCal.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Office.Tools.v4.0.Framework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Tools.Applications.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Office.Tools, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Office.Tools.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Office.Tools.Outlook, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Office.Tools.Common.v4.0.Utilities, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Office.Tools.Outlook.v4.0.Utilities, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Office, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c">
+      <Private>False</Private>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Outlook, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c">
+      <Private>False</Private>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="stdole, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Yandex.Metrica">
+      <Version>3.5.1</Version>
+    </PackageReference>
+    <PackageReference Include="log4net">
+      <Version>2.0.15</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>13.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="NodaTime">
+      <Version>3.1.6</Version>
+    </PackageReference>
+  </ItemGroup>
+  <!--
+    This section defines the user source files that are part of the project.
+     
+    A "Compile" element specifies a source file to compile.
+    An "EmbeddedResource" element specifies an .resx file for embedded resources.
+    A "None" element specifies a file that is not to be passed to the compiler (for instance, 
+    a text file or XML file).
+    The "AppDesigner" element specifies the directory where the application properties files
+    can be found.
+  -->
+  <ItemGroup>
+    <Compile Include="AutoUpdateManager.cs" />
+    <Compile Include="Clients\HttpClientErrorHandler.cs" />
+    <Compile Include="Clients\HttpClientLoggingHandler.cs" />
+    <Compile Include="Clients\IHttpClientFactory.cs" />
+    <Compile Include="Clients\WebDavClient.cs" />
+    <Compile Include="ComponentContainer.cs" />
+    <Compile Include="Configuration\AppConfig.cs" />
+    <Compile Include="Configuration\DataFolder.cs" />
+    <Compile Include="Configuration\ProxyOptionsProvider.cs" />
+    <Compile Include="Configuration\RegistrySettings.cs" />
+    <Compile Include="Configuration\SyncConfig.cs" />
+    <Compile Include="Configuration\SyncConfigController.cs" />
+    <Compile Include="Configuration\UserInfo.cs" />
+    <Compile Include="Configuration\XmlFile.cs" />
+    <Compile Include="Localization\Strings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+    <Compile Include="LoginController.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Synchronization\AccountFolders.cs" />
+    <Compile Include="Synchronization\CalDavResourcesDataAccess.cs" />
+    <Compile Include="Synchronization\CancellableSynchronizer.cs" />
+    <Compile Include="Synchronization\InvitesInfoStorage.cs" />
+    <Compile Include="Synchronization\Progress\TotalProgressLogger.cs" />
+    <Compile Include="Synchronization\Progress\SyncSessionProgress.cs" />
+    <Compile Include="Synchronization\Progress\TotalProgressFactory.cs" />
+    <Compile Include="Synchronization\IncomingInvitesMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\FolderMonitor\AppointmentFolderMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\FolderMonitor\FolderMonitorBase.cs" />
+    <Compile Include="Synchronization\Synchronizer\FolderMonitor\GenericFolderMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\FolderMonitor\IFolderMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\States\CreateInBWith404Fallback.cs" />
+    <Compile Include="Synchronization\Synchronizer\EntityMappers\ContactEntityMapper.cs" />
+    <Compile Include="Synchronization\Synchronizer\EntityMappers\EventEntityMapper.cs" />
+    <Compile Include="Synchronization\Synchronizer\EntityMappers\TaskEntityMapper.cs" />
+    <Compile Include="Synchronization\Scheduler.cs" />
+    <Compile Include="Synchronization\SyncErrorHandler.cs" />
+    <Compile Include="Synchronization\Synchronizer\EventSyncInterceptor.cs" />
+    <Compile Include="Synchronization\Synchronizer\QueryAppointmentFolderStrategy.cs" />
+    <Compile Include="Synchronization\Synchronizer\FolderMonitor\FolderMonitorFactory.cs" />
+    <Compile Include="Synchronization\Synchronizer\OutlookEventRepositoryWrapper.cs" />
+    <Compile Include="Synchronization\Synchronizer\SyncStrategy\EventSyncStrategyServerToOutlook.cs" />
+    <Compile Include="Synchronization\Synchronizer\SyncStrategy\EventSyncStrategyBothWays.cs" />
+    <Compile Include="Synchronization\SyncStatus.cs" />
+    <Compile Include="Synchronization\SyncTargetRunner.cs" />
+    <Compile Include="Clients\HttpClientFactory.cs" />
+    <Compile Include="Synchronization\Synchronizer\SynchronizerFactory.cs" />
+    <Compile Include="Synchronization\SyncManager.cs" />
+    <Compile Include="Synchronization\SyncTargetInfo.cs" />
+    <Compile Include="Telemetry.cs" />
+    <Compile Include="Ui\AboutWindow.xaml.cs">
+      <DependentUpon>AboutWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\AutoUpdateWindow.xaml.cs">
+      <DependentUpon>AutoUpdateWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\ErrorWindow.xaml.cs">
+      <DependentUpon>ErrorWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ExceptionHandler.cs" />
+    <Compile Include="Ui\Login\ConfirmationCodePage.xaml.cs">
+      <DependentUpon>ConfirmationCodePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\LogonSession.cs" />
+    <Compile Include="Ui\Login\ErrorPage.xaml.cs">
+      <DependentUpon>ErrorPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\LoginWindow.xaml.cs">
+      <DependentUpon>LoginWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\PassportPage.xaml.cs">
+      <DependentUpon>PassportPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\SevenDigitsBox.xaml.cs">
+      <DependentUpon>SevenDigitsBox.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\WebBrowser.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Ui\OutlookWin32Window.cs" />
+    <Compile Include="Ui\ProgressWindow.xaml.cs">
+      <DependentUpon>ProgressWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\SyncConfigModel.cs" />
+    <Compile Include="Ui\Throbber.xaml.cs">
+      <DependentUpon>Throbber.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\SettingsWindow.xaml.cs">
+      <DependentUpon>SettingsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\SyncConfigWindow.xaml.cs">
+      <DependentUpon>SyncConfigWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Y360ConnectorRibbon.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Ui\Y360ConnectorRibbon.Designer.cs">
+      <DependentUpon>Y360ConnectorRibbon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Utilities\AppointmentItemUtils.cs" />
+    <Compile Include="Utilities\EmailAddress.cs" />
+    <Compile Include="Utilities\RollingLogAppender.cs" />
+    <EmbeddedResource Include="Localization\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Localization\Strings.ru-RU.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Localization\Strings.en-US.resx" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="Ui\Y360ConnectorRibbon.resx">
+      <DependentUpon>Y360ConnectorRibbon.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="app.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="ThisAddIn.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <None Include="ThisAddIn.Designer.xml">
+      <DependentUpon>ThisAddIn.cs</DependentUpon>
+    </None>
+    <Compile Include="ThisAddIn.Designer.cs">
+      <DependentUpon>ThisAddIn.Designer.xml</DependentUpon>
+    </Compile>
+    <AppDesigner Include="Properties\" />
+    <None Include="Y360OutlookConnector_TemporaryKey.pfx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\AppIcon.ico" />
+    <Resource Include="Resources\SyncNow.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CalDavSynchronizer\GenSync\GenSync.csproj">
+      <Project>{76C932E7-ECA5-4010-B602-2104327EE5EE}</Project>
+      <Name>GenSync</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CalDavSynchronizer\Thought.vCards\Thought.vCards.csproj">
+      <Project>{A53D3CEB-F7AF-41AB-AA04-4D3CF684BBAF}</Project>
+      <Name>Thought.vCards</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TinyCalDavSynchronizer\TinyCalDavSynchronizer.csproj">
+      <Project>{8DBE06C4-7F40-40EF-97B7-78AA5A00AEFB}</Project>
+      <Name>TinyCalDavSynchronizer</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Login.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Profiles.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Settings.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\About.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Help.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Ui\AboutWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\AutoUpdateWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\ErrorWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Ui\Login\ConfirmationCodePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Login\ErrorPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Login\LoginWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Login\PassportPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Login\SevenDigitsBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\ProgressWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Throbber.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\SettingsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\SyncConfigWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\AppLogo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\DefaultAva.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\LoginSmall.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\LogoutSmall.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Eye.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\SyncFailure.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\SyncSuccess.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\ExclamationSign.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Ya.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\YaSmall.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Attention.ico" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <!-- Include the build rules for a C# project. -->
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- Include additional build rules for an Office application add-in. -->
+  <Import Project="$(VSToolsPath)\OfficeTools\Microsoft.VisualStudio.Tools.Office.targets" Condition="'$(VSToolsPath)' != ''" />
+  <!-- This section defines VSTO properties that describe the host-changeable project properties. -->
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{BAA0C2D2-18E2-41B9-852F-F413020CAA33}">
+        <ProjectProperties HostName="Outlook" HostPackage="{29A7B9D7-A7F1-4328-8EF0-6B2D1A56B2C1}" OfficeVersion="15.0" VstxVersion="4.0" ApplicationType="Outlook" Language="cs" TemplatesPath="" DebugInfoExeName="#Software\Microsoft\Office\16.0\Outlook\InstallRoot\Path#outlook.exe" AddItemTemplatesGuid="{A58A78EB-1C92-4DDD-80CF-E8BD872ABFC4}" />
+        <Host Name="Outlook" GeneratedCodeNamespace="Y360OutlookConnector" IconIndex="0">
+          <HostItem Name="ThisAddIn" Code="ThisAddIn.cs" CanonicalName="AddIn" CanActivate="false" IconIndex="1" Blueprint="ThisAddIn.Designer.xml" GeneratedCode="ThisAddIn.Designer.cs" />
+        </Host>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

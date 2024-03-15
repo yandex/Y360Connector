@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension">
+    <Product Id="*" Name="Y360 Connector CalDAV/CardDAV" Language="1033"
+           Version="1.0.0.0" Manufacturer="YANDEX LLC"
+           UpgradeCode="A3AF9969-D843-449E-913B-60CA62781498">
+
+        <Package InstallerVersion="200" 
+                 Compressed="yes"
+                 InstallScope="perUser"
+                 InstallPrivileges="limited"
+                 Description="Y360 Connector !(bind.property.ProductVersion) Installer"
+                 Comments="(c) 2024 !(bind.property.Manufacturer)"/>
+
+        <MajorUpgrade AllowDowngrades="yes" />
+
+        <MediaTemplate EmbedCab="yes" />
+
+        <PropertyRef Id="WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED"/>
+        <Condition Message="This application requires .NET Framework 4.8. Please install the .NET Framework then run this installer again.">
+            <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED]]>
+        </Condition>
+
+        <PropertyRef Id="CustomUI"/>
+
+        <Icon Id="Icon.ico" SourceFile="Icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="Icon.ico" />
+        <Property Id="ARPNOMODIFY" Value="yes"/>
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="LocalAppDataFolder">
+                <Directory Id="Yandex" Name="Yandex">
+                    <Directory Id="INSTALLFOLDER" Name="Y360.OutlookConnector" >
+                        <Directory Id="FilesRoot" Name="bin" >
+                            <Directory Id="EnResDir" Name="en-US" />
+                            <Directory Id="RuResDir" Name="ru-RU" />
+                        </Directory>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <Feature Id="ProductFeature" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+        </Feature>
+
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <ComponentRef Id="MainComponent" />
+            <ComponentRef Id="RegistrationComponent" />
+            <ComponentRef Id="RuResComponent" />
+            <ComponentRef Id="EnResComponent" />
+        </ComponentGroup>
+        
+    </Product>
+</Wix>

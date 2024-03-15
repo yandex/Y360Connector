@@ -1,0 +1,6 @@
+LIBRARY "Y360OutlookConnector.Setup.CA.dll"
+
+EXPORTS
+	CheckOutlookRunningCA
+	RestartOutlookCA
+	LaunchOutlookCA

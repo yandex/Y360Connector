@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+
+        <Property Id="CustomUI" Hidden="yes"/> <!-- needed only to reference the fragment -->
+
+        <Binary Id="LogoIcon" SourceFile="Icon.ico" />
+
+        <UIRef Id="WixUI_Common" />
+        <UIRef Id="WixUI_ErrorProgressText" />
+
+        <UI>
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+
+            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+            <Property Id="WixUI_Mode" Value="Custom" />
+
+            <DialogRef Id="ErrorDlg" />
+            <DialogRef Id="FilesInUse" />
+            <DialogRef Id="MsiRMFilesInUse" />
+
+            <Dialog Id="RestartOutlookDialog" Width="322" Height="110" Title="!(loc.ExitDialog_Title)">
+                <Control Id="LogoIcon" Type="Icon" X="10" Y="10" Width="24" Height="24" Text="LogoIcon" IconSize="48" />
+
+                <Control Id="Cancel" Type="PushButton" X="300" Y="300" Width="56" Height="17" Cancel="yes" Hidden="yes">
+                    <Publish Event="EndDialog" Value="Return">1</Publish>
+                </Control>
+
+                <Control Id="Description" Type="Text" X="40" Y="15" Width="272" Height="40" Transparent="yes" NoPrefix="yes"
+                         Text="!(loc.RestartOutlookDialog_Message)" />
+
+                <Control Id="RestartOutlook" Type="PushButton" X="216" Y="83" Width="95" Height="17" 
+                         Text="!(loc.RestartOutlookDialog_Button)">
+                    <Publish Event="DoAction" Value="RestartOutlookCA">1</Publish>
+                    <Publish Event="EndDialog" Value="Return">1</Publish>
+                </Control>
+            </Dialog>
+
+
+            <Dialog Id="CustomProgressDlg" Width="322" Height="110" Title="!(loc.ProgressDlg_Title)" Modeless="yes">
+                <Control Id="LogoIcon" Type="Icon" X="10" Y="10" Width="24" Height="24" Text="LogoIcon" IconSize="48" />
+                <Control Id="TextInstalling" Type="Text" X="40" Y="10" Width="272" Height="35" Hidden="no"
+                         NoPrefix="yes" Text="!(loc.ProgressDlgTextInstalling)" />
+                <Control Id="TextChanging" Type="Text" X="40" Y="15" Width="272" Height="35" Hidden="yes" NoPrefix="yes" Text="!(loc.ProgressDlgTextChanging)">
+                    <Condition Action="show">WixUI_InstallMode = "Change"</Condition>
+                </Control>
+                <Control Id="TextRepairing" Type="Text" X="40" Y="15" Width="272" Height="35" Hidden="yes" NoPrefix="yes" Text="!(loc.ProgressDlgTextRepairing)">
+                    <Condition Action="show">WixUI_InstallMode = "Repair"</Condition>
+                </Control>
+                <Control Id="TextRemoving" Type="Text" X="40" Y="15" Width="272" Height="35" Hidden="yes" NoPrefix="yes" Text="!(loc.ProgressDlgTextRemoving)">
+                    <Condition Action="show">WixUI_InstallMode = "Remove"</Condition>
+                </Control>
+                <Control Id="TextUpdating" Type="Text" X="40" Y="15" Width="272" Height="35" Hidden="yes" NoPrefix="yes" Text="!(loc.ProgressDlgTextUpdating)">
+                    <Condition Action="show">WixUI_InstallMode = "Update"</Condition>
+                </Control>
+                <Control Id="ActionText" Type="Text" X="10" Y="60" Width="292" Height="14">
+                    <Subscribe Event="ActionText" Attribute="Text" />
+                </Control>
+                <Control Id="ProgressBar" Type="ProgressBar" X="10" Y="84" Width="228" Height="14" ProgressBlocks="yes" Text="!(loc.ProgressDlgProgressBar)">
+                    <Subscribe Event="SetProgress" Attribute="Progress" />
+                </Control>
+                <Control Id="Cancel" Type="PushButton" X="246" Y="83" Width="66" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUICancel)">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+            </Dialog>
+          
+            <Dialog Id="CustomFatalError" Width="322" Height="110" Title="!(loc.FatalError_Title)">
+                <Control Id="ErrorIcon" Type="Icon" X="10" Y="10" Width="24" Height="24" FixedSize="yes" IconSize="32" Text="WixUI_Ico_Exclam" />
+                <Control Id="Description" Type="Text" X="40" Y="10" Width="272" Height="80" Transparent="yes" NoPrefix="yes" Text="!(loc.FatalErrorDescription1) !(loc.FatalErrorDescription2)" />
+                <Control Id="Finish" Type="PushButton" X="246" Y="83" Width="65" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIFinish)">
+                    <Publish Event="EndDialog" Value="Exit">1</Publish>
+                </Control>
+            </Dialog>
+          
+            <Dialog Id="CustomUserExit" Width="322" Height="110" Title="!(loc.UserExit_Title)">
+                <Control Id="ErrorIcon" Type="Icon" X="10" Y="10" Width="24" Height="24" FixedSize="yes" IconSize="32" Text="WixUI_Ico_Exclam" />
+                <Control Id="Description" Type="Text" X="40" Y="10" Width="272" Height="80" Transparent="yes" NoPrefix="yes" Text="!(loc.UserExitDescription1) !(loc.UserExitDescription2)" />
+                <Control Id="Finish" Type="PushButton" X="246" Y="83" Width="65" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIFinish)">
+                    <Publish Event="EndDialog" Value="Exit">1</Publish>
+                </Control>
+            </Dialog>
+
+            <InstallUISequence>
+                <Custom Action='CheckOutlookRunningCA' After='ExecuteAction' />
+                <Custom Action='LaunchOutlookCA' After='CheckOutlookRunningCA'>NOT OUTLOOK_IS_RUNING</Custom>
+                <Show Dialog="CustomProgressDlg" Before="ExecuteAction" />
+                <Show Dialog="CustomFatalError" OnExit="error"/>
+                <Show Dialog="CustomUserExit" OnExit="cancel"/>
+                <Show Dialog="RestartOutlookDialog" OnExit="success">OUTLOOK_IS_RUNING</Show>
+            </InstallUISequence>
+
+            <AdminUISequence>
+                <Custom Action='CheckOutlookRunningCA' After='ExecuteAction' />
+                <Custom Action='LaunchOutlookCA' After='CheckOutlookRunningCA'>NOT OUTLOOK_IS_RUNING</Custom>
+                <Show Dialog="CustomProgressDlg" Before="ExecuteAction" />
+                <Show Dialog="CustomFatalError" OnExit="error"/>
+                <Show Dialog="CustomUserExit" OnExit="cancel"/>
+                <Show Dialog="RestartOutlookDialog" OnExit="success">OUTLOOK_IS_RUNING</Show>
+            </AdminUISequence>
+        </UI>
+
+        <Binary Id="CustomActionsDLL" SourceFile="$(var.CAOutputDir)\Y360OutlookConnector.Setup.CA.dll" />
+        <CustomAction Id='CheckOutlookRunningCA' BinaryKey='CustomActionsDLL' DllEntry='CheckOutlookRunningCA' 
+                      Impersonate='yes' Execute='immediate' Return='ignore' />
+        <CustomAction Id='RestartOutlookCA' BinaryKey='CustomActionsDLL' DllEntry='RestartOutlookCA' 
+                      Impersonate='yes' Execute='immediate' Return='ignore' />
+        <CustomAction Id='LaunchOutlookCA' BinaryKey='CustomActionsDLL' DllEntry='LaunchOutlookCA' 
+                      Impersonate='yes' Return='ignore' />
+
+    </Fragment>
+</Wix>

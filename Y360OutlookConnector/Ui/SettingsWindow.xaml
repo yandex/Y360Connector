@@ -1,0 +1,185 @@
+<Window x:Class="Y360OutlookConnector.Ui.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:local="clr-namespace:Y360OutlookConnector.Ui"
+        xmlns:l10n="clr-namespace:Y360OutlookConnector.Localization"
+        mc:Ignorable="d"
+        Icon="/Y360OutlookConnector;component/Resources/AppIcon.ico"
+        Title="{x:Static l10n:Strings.SettingsWindow_WindowTitle}"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Width="494" SizeToContent="Height">
+    <StackPanel Orientation="Vertical" Margin="16">
+        <!--User info -->
+        <Grid Visibility="Visible" x:Name="LoggedOutPanel">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" 
+                   Width="20" Height="20" Margin="0,0,8,0" 
+                   Source="/Y360OutlookConnector;component/Resources/YaSmall.png" />
+            <Label Grid.Column="1" 
+                   Content="{x:Static l10n:Strings.SettingsWindow_UserLogoutDesc}"/>
+            <Button Grid.Column="2" 
+                    Height="20" MinWidth="74" 
+                    Click="LoginButton_OnClick">
+                <StackPanel  Orientation="Horizontal">
+                    <Image Width="12" Height="12" Margin="0,0,6,0" 
+                           Source="/Y360OutlookConnector;component/Resources/LoginSmall.png"/>
+                    <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_LoginButton}" />
+                </StackPanel>
+            </Button>
+        </Grid>
+        <Grid Visibility="Collapsed" x:Name="LoggedInPanel">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Ellipse Grid.Column="0"
+                     Width="48" Height="48">
+                <Ellipse.Fill>
+                    <ImageBrush x:Name="UserAvatarImage" 
+                                ImageSource="/Y360OutlookConnector;component/Resources/DefaultAva.png" />
+                </Ellipse.Fill>
+            </Ellipse>
+            
+            <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                <TextBlock x:Name="UserNameLabel" FontSize="17px" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock x:Name="EmailLabel" FontSize="12px" FontWeight="Bold" Foreground="#999999" Padding="0,4"/>
+            </StackPanel>
+            <Button Grid.Column="2" 
+                    Height="20" MinWidth="74"
+                    Click="LogoutButton_OnClick">
+                <StackPanel  Orientation="Horizontal">
+                    <Image Width="12" Height="12" Margin="0,0,6,0" 
+                           Source="/Y360OutlookConnector;component/Resources/LogoutSmall.png"/>
+                    <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_LogoutButton}" />
+                </StackPanel>
+            </Button>
+        </Grid>
+        <Separator Margin="0,16" BorderBrush="#d9d9d9" BorderThickness="1" />
+        
+        <!-- Log settings -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Grid.ColumnSpan="2" 
+                   Padding="0,4,8,6" FontWeight="Bold" 
+                   Content="{x:Static l10n:Strings.SettingsWindow_LogPanelTitle}" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static l10n:Strings.SettingsWindow_LogPanelDescription}" />
+            <StackPanel Grid.Row="1" Grid.Column="1" 
+                        Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Margin="10,0,0,0">
+                    <Hyperlink Click="ShowLogsLink_OnClick">
+                        <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_LogShowLink}" />
+                    </Hyperlink>
+                </TextBlock>
+                <TextBlock Margin="10,0,0,0">
+                    <Hyperlink Click="ClearLogsLink_OnClick">
+                        <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_LogClearLink}"/>
+                    </Hyperlink>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+        <Separator Margin="0,18" BorderBrush="#d9d9d9" BorderThickness="1" />
+        
+        <!-- Proxy settings -->
+        <StackPanel Orientation="Vertical">
+            <StackPanel.Resources>
+                <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            </StackPanel.Resources>
+            <Label Grid.Row="0" 
+                   Padding="0,4,8,4" FontWeight="Bold" 
+                   Content="{x:Static l10n:Strings.SettingsWindow_ProxyPanelTitle}" />
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="{x:Static l10n:Strings.SettingsWindow_ProxyPanelDescription}"/>
+            <CheckBox Grid.Row="2" 
+                      Margin="0,16,0,8" 
+                      x:Name="ProxyManualCheckbox" 
+                      Checked="ProxyManualCheckbox_Changed" Unchecked="ProxyManualCheckbox_Changed"
+                      Content="{x:Static l10n:Strings.SettingsWindow_ProxyManualSettings}" />
+            <StackPanel x:Name="ProxyErrorPanel"  Visibility="Collapsed">
+                <Border Visibility="{Binding ElementName=ProxyManualCheckbox, Path=IsChecked, 
+                                    Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Margin="0,8,0,8" Padding="8,3,8,4"
+                        Background="#FFF0F2">
+                    <DockPanel>
+                        <Image Margin="0,0,6,0" Width="14" Height="14" 
+                               Source="/Y360OutlookConnector;component/Resources/SyncFailure.png"/>
+                        <TextBlock Foreground="#E75669" TextWrapping="Wrap"
+                                   x:Name="ProxyErrorText"
+                                   Text="{x:Static l10n:Strings.SettingsWindow_ProxyErrorServer}" />
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+            <Grid Grid.Row="3" 
+                  Visibility="{Binding ElementName=ProxyManualCheckbox, Path=IsChecked, 
+                              Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Label Grid.Row="0" Grid.Column="0">
+                    <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_ProxyUrlLabel}"/>
+                </Label>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
+                    <TextBox x:Name="ProxyUrlEdit"
+                             TextChanged="ProxyUrlEdit_TextChanged"
+                             Height="20" Margin="16,4,0,4"
+                             VerticalAlignment="Center" />
+                    <TextBlock x:Name="ProxyUrlErrorLabel" Visibility="Collapsed"
+                               Margin="16,-2,0,6" Foreground="#ff3737"
+                               Text="{x:Static l10n:Strings.SettingsWindow_ProxyUrlErrorEmpty}" />
+                </StackPanel>
+                <Label Grid.Row="1" Grid.Column="0">
+                    <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_ProxyUserName}"/>
+                </Label>
+                <TextBox Grid.Row="1" Grid.Column="1" 
+                         x:Name="ProxyUserNameEdit"
+                         TextChanged="ProxyUserNameEdit_TextChanged"
+                         Height="20" Margin="16,4,0,4"
+                         VerticalAlignment="Center" />
+
+                <Label Grid.Row="2" Grid.Column="0">
+                    <TextBlock Text="{x:Static l10n:Strings.SettingsWindow_ProxyPassword}" />
+                </Label>
+                <PasswordBox Grid.Row="2" Grid.Column="1"
+                             x:Name="ProxyPasswordEdit"
+                             PasswordChanged="ProxyPasswordEdit_PasswordChanged"
+                             Height="20" Margin="16,4,0,4"
+                             VerticalAlignment="Center" />
+            </Grid>
+        </StackPanel>
+        
+        <!-- Footer -->
+        <Separator Height="16" Visibility="Hidden"/>
+        <StackPanel x:Name="ButtonsPanel" 
+                    Visibility="Collapsed"
+                    Orientation="Horizontal" FlowDirection="RightToLeft">
+            <Button MinWidth="84" Height="20" 
+                    Padding="6,0,6,0" 
+                    IsDefault="True" Click="ApplyButton_OnClick" 
+                    Content="{x:Static l10n:Strings.SettingsWindow_ApplyButton}" />
+            <Separator Width="10" Visibility="Hidden"/>
+            <Button MinWidth="84" Height="20" Padding="6,0,6,0" 
+                    Click="CancelButton_OnClick" 
+                    Content="{x:Static l10n:Strings.SettingsWindow_CancelButton}" />
+        </StackPanel>
+    </StackPanel>
+</Window>
