@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 
 namespace Y360OutlookConnector.Ui
 {
     public class OutlookWin32Window
     {
-        [DllImport("user32")]
+        [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
         public static IntPtr GetHandle(object windowObject)
@@ -15,7 +15,7 @@ namespace Y360OutlookConnector.Ui
 
             var caption = windowObject.GetType().InvokeMember("Caption",
                 System.Reflection.BindingFlags.GetProperty, null, windowObject, null).ToString();
-            return FindWindow("rctrl_renwnd32\0", caption);
+            return FindWindow("rctrl_renwnd32", caption);
         }
     }
 }

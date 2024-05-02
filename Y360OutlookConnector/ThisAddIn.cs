@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using log4net;
 using System.Diagnostics;
 using System.Reflection;
@@ -130,7 +130,10 @@ namespace Y360OutlookConnector
                 if (langId == 1049)
                     cultureName = "ru-RU";
 
-                Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo(cultureName);
+                var cultureInfo = new System.Globalization.CultureInfo(cultureName);
+
+                // Устанавливаем UI язык для всех потоков в приложении
+                System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
             }
         }
 

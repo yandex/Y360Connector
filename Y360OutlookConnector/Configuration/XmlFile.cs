@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Xml.Schema;
 using log4net;
 
 namespace Y360OutlookConnector.Configuration
@@ -23,7 +24,7 @@ namespace Y360OutlookConnector.Configuration
                 if (!String.IsNullOrEmpty(folderPath) && !Directory.Exists(folderPath))
                     Directory.CreateDirectory(folderPath);
 
-                using (var writer = XmlWriter.Create(fileName, 
+                using (var writer = XmlWriter.Create(fileName,
                            new XmlWriterSettings{ Indent = true, Encoding = Encoding.UTF8 }))
                 {
                     var serializer = new XmlSerializer(obj.GetType());
@@ -51,7 +52,19 @@ namespace Y360OutlookConnector.Configuration
 
                 if (File.Exists(fileName))
                 {
-                    using (var reader = XmlReader.Create(fileName))
+                    var settings = new XmlReaderSettings
+                    {
+                        DtdProcessing = DtdProcessing.Prohibit,
+                        XmlResolver = null,
+                        IgnoreProcessingInstructions = true,
+                        IgnoreComments = true,
+                        IgnoreWhitespace = true,
+                        MaxCharactersInDocument = 512 * 1024,
+                        ValidationFlags = XmlSchemaValidationFlags.None,
+                        ValidationType = ValidationType.None
+                    };
+
+                    using (var reader = XmlReader.Create(fileName, settings))
                     {
                         var serializer = new XmlSerializer(typeof(TObject));
                         result = (TObject) serializer.Deserialize(reader);

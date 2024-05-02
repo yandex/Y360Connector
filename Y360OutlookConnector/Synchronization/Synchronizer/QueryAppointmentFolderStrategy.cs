@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
 using CalDavSynchronizer;
@@ -154,7 +154,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     lastModificationTime = ownerCriticalChange;
                 }
 
-                if (GetDateTime(row, LID_OWNER_CRITICAL_CHANGE, false, out DateTime appointmentReplyTime)
+                if (GetDateTime(row, PidLidAppointmentReplyTime, false, out DateTime appointmentReplyTime)
                     && (lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || appointmentReplyTime > lastModificationTime))
                 {
                     lastModificationTime = appointmentReplyTime;
@@ -230,7 +230,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     var appointmentId = new AppointmentId
                     {
                         EntryId = appointment.EntryID, 
-                        GlobalAppointmentId = appointment.GlobalAppointmentID
+                        GlobalAppointmentId = appointment.GlobalAppointmentID ?? String.Empty
                     };
 
                     var changeTime = AppointmentItemUtils.GetLastChangeTime(appointment);

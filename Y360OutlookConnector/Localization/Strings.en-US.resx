@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
+  <!--
+    Microsoft ResX Schema
+
     Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
     associated with the data types.
-    
+
     Example:
-    
+
     ... ado.net/XML headers & schema ...
     <resheader name="resmimetype">text/microsoft-resx</resheader>
     <resheader name="version">2.0</resheader>
@@ -26,36 +26,36 @@
         <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
         <comment>This is a comment</comment>
     </data>
-                
-    There are any number of "resheader" rows that contain simple 
+
+    There are any number of "resheader" rows that contain simple
     name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
     mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
     extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
     read any of the formats listed below.
-    
+
     mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
             : and then encoded with base64 encoding.
-    
+
     mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
             : and then encoded with base64 encoding.
 
     mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
+    value   : The object must be serialized into a byte array
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AboutWindow_CopyrightText" xml:space="preserve">
-    <value>© Y360 Connector, 2024. All rights reserved</value>
+    <value>© Yandex Connector, 2024. All rights reserved</value>
   </data>
   <data name="AboutWindow_LicenseAgreement" xml:space="preserve">
     <value>License Agreement</value>
@@ -133,19 +133,19 @@
     <value>Version {0} ({1})</value>
   </data>
   <data name="AboutWindow_WindowTitle" xml:space="preserve">
-    <value>Y360 Connector CalDAV/CardDAV</value>
+    <value>Yandex Connector</value>
   </data>
   <data name="AutoUpdateWindow_UpdateAvailableDescription" xml:space="preserve">
     <value>It will be applied when you restart Outlook.</value>
   </data>
   <data name="AutoUpdateWindow_UpdateAvailableMessage" xml:space="preserve">
-    <value>Y360&#160;Connector&#160;CalDAV/CardDAV updated</value>
+    <value>Yandex&#160;Connector updated</value>
   </data>
   <data name="AutoUpdateWindow_UpdateButton" xml:space="preserve">
     <value>Restart</value>
   </data>
   <data name="AutoUpdateWindow_WindowTitle" xml:space="preserve">
-    <value>Y360 Connector CalDAV/CardDAV</value>
+    <value>Yandex Connector</value>
   </data>
   <data name="LoginWindow_AuthCodePageDesc" xml:space="preserve">
     <value>To log in to your account, enter the confirmation code from your browser</value>
@@ -157,7 +157,7 @@
     <value>Don't close this window</value>
   </data>
   <data name="LoginWindow_WindowTitle" xml:space="preserve">
-    <value>Log in — Y360 Connector CalDAV/CardDAV</value>
+    <value>Log in — Yandex Connector</value>
   </data>
   <data name="Messages_LoginWebViewFailureDescription" xml:space="preserve">
     <value>Try again or use a different login method in your browser</value>
@@ -181,7 +181,7 @@
     <value>Outlook extension that syncs your calendars, tasks, and contacts with Yandex 360 using the CalDAV and CardDAV protocols.</value>
   </data>
   <data name="Messages_ProductName" xml:space="preserve">
-    <value>Y360 Connector CalDAV/CardDAV</value>
+    <value>Yandex Connector</value>
   </data>
   <data name="Messages_ProxyErrorMessageButton" xml:space="preserve">
     <value>Configure a proxy</value>
@@ -277,7 +277,7 @@
     <value>You need to log in to your account</value>
   </data>
   <data name="SettingsWindow_WindowTitle" xml:space="preserve">
-    <value>Settings — Y360 Connector CalDAV/CardDAV</value>
+    <value>Settings — Yandex Connector</value>
   </data>
   <data name="SyncConfigWindow_ApplyButton" xml:space="preserve">
     <value>Save changes</value>
@@ -346,7 +346,7 @@ Select a different folder</value>
     <value>Tasks</value>
   </data>
   <data name="SyncConfigWindow_WindowTitle" xml:space="preserve">
-    <value>Events, tasks, and contacts — Y360 Connector CalDAV/CardDAV</value>
+    <value>Events, tasks, and contacts — Yandex Connector</value>
   </data>
   <data name="SyncConfigWindow_WrongFolderTypeForCalendarMessage" xml:space="preserve">
     <value>You can't select this folder. 
@@ -363,6 +363,84 @@ Select a folder with elements of the "Tasks" type</value>
   <data name="SyncConfigWindow_СreatingFolderErrorMessage" xml:space="preserve">
     <value>Unable to create "{0}"</value>
   </data>
+  <data name="Telemost_Messages_AuthorizeInTelemostMessage" xml:space="preserve">
+    <value>Log in to the Yandex Telemost add-on to manage meetings</value>
+  </data>
+  <data name="Telemost_Messages_InfoPanelTitle" xml:space="preserve">
+    <value>Telemost Messages</value>
+  </data>
+  <data name="Telemost_Messages_MeetingCreateErrorMessage" xml:space="preserve">
+    <value>Сouldn't create meeting. Error code: {0}. Please try again.</value>
+  </data>
+  <data name="Telemost_Messages_MeetingCreateForbiddenErrorMessage" xml:space="preserve">
+    <value>Сouldn't create meeting. Error code: {0}. Try logging out of your account and then log in again.</value>
+  </data>
+  <data name="Telemost_Messages_MeetingCreatedMessage" xml:space="preserve">
+    <value>Yandex Telemost meeting created. Meeting link added to invitation.</value>
+  </data>
+  <data name="Telemost_Messages_MeetingCreatingMessage" xml:space="preserve">
+    <value>Creating Yandex Telemost meeting...</value>
+  </data>
+  <data name="Telemost_Messages_MeetingInternalMessage" xml:space="preserve">
+    <value>Only company employees can join the meeting. </value>
+  </data>
+  <data name="Telemost_Messages_MeetingLinkMessage" xml:space="preserve">
+    <value>Link to the video meeting: {0} </value>
+  </data>
+  <data name="Telemost_Messages_MeetingSubject" xml:space="preserve">
+    <value>Video meeting in Yandex Telemost</value>
+  </data>
+  <data name="Telemost_Messages_MeetingUpdateErrorMessage" xml:space="preserve">
+    <value>Сouldn't update meeting. Error code: {0}. Please try again.</value>
+  </data>
+  <data name="Telemost_Messages_MeetingUpdateForbiddenErrorMessage" xml:space="preserve">
+    <value>Сouldn't update meeting. Error code: {0}. Try logging out of your account and then log in again.</value>
+  </data>
+  <data name="Telemost_Messages_MeetingUpdatedMessage" xml:space="preserve">
+    <value>Yandex Telemost meeting updated</value>
+  </data>
+  <data name="Telemost_Messages_MeetingUpdatingMessage" xml:space="preserve">
+    <value>Updating Yandex Telemost meeting...</value>
+  </data>
+  <data name="Telemost_Messages_NoInternetErrorMessage" xml:space="preserve">
+    <value>Network issue. Check your internet connection and try again.</value>
+  </data>
+  <data name="Telemost_SettingsWindow_CreateMeetingButtonText" xml:space="preserve">
+    <value>Create link</value>
+  </data>
+  <data name="Telemost_SettingsWindow_ExternaUsersWontBeAbleToJoinLabelWarningText" xml:space="preserve">
+    <value>External users won't be able to join</value>
+  </data>
+  <data name="Telemost_SettingsWindow_LoginButtonText" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Telemost_SettingsWindow_LoginLabelText" xml:space="preserve">
+    <value>Log in to create a meeting in Yandex Telemost</value>
+  </data>
+  <data name="Telemost_SettingsWindow_OnlyEmployeesCheckBoxLabelText" xml:space="preserve">
+    <value>For employees only</value>
+  </data>
+  <data name="Telemost_SettingsWindow_SaveSettingsButtonText" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Telemost_SettingsWindow_SettingsWindowTitle" xml:space="preserve">
+    <value>Telemost Settings</value>
+  </data>
+  <data name="Telemost_SettingsWindow_TelemostMeetingLabelText" xml:space="preserve">
+    <value>Video meeting in Yandex Telemost</value>
+  </data>
+  <data name="Telemost_Toolbar_ExternalMeetingButton" xml:space="preserve">
+    <value>External meeting</value>
+  </data>
+  <data name="Telemost_Toolbar_InternalMeetingButton" xml:space="preserve">
+    <value>Internal meeting</value>
+  </data>
+  <data name="Telemost_Toolbar_RibbonMenuButton" xml:space="preserve">
+    <value>Yandex Telemost</value>
+  </data>
+  <data name="Telemost_Toolbar_SettingsButton" xml:space="preserve">
+    <value>Settings</value>
+  </data>
   <data name="Toolbar_AboutButton" xml:space="preserve">
     <value>About</value>
   </data>
@@ -373,10 +451,10 @@ Select a folder with elements of the "Tasks" type</value>
     <value>Log in</value>
   </data>
   <data name="Toolbar_RibbonGroup" xml:space="preserve">
-    <value>Y360 Connector CalDAV/CardDAV</value>
+    <value>Yandex Connector</value>
   </data>
   <data name="Toolbar_RibbonTab" xml:space="preserve">
-    <value>Y360 Connector</value>
+    <value>Yandex Connector</value>
   </data>
   <data name="Toolbar_SettingsButton" xml:space="preserve">
     <value>Settings</value>

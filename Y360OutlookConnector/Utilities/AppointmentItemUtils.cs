@@ -12,8 +12,8 @@ namespace Y360OutlookConnector.Utilities
     {
         // https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxocal/1d3aac05-a7b9-45cc-a213-47f0a0a2c5c1
 
-        private static byte[] GlobalObjectIdHeader = { 0x04, 0x00, 0x00, 0x00, 0x82, 0x00, 0xE0, 0x00, 
-                                                       0x74, 0xC5, 0xB7, 0x10, 0x1A, 0x82, 0xE0, 0x08};
+        private static readonly byte[] GlobalObjectIdHeader = { 0x04, 0x00, 0x00, 0x00, 0x82, 0x00, 0xE0, 0x00, 
+                                                                0x74, 0xC5, 0xB7, 0x10, 0x1A, 0x82, 0xE0, 0x08};
 
         private const string PidLidAppointmentReplyTime =
             "http://schemas.microsoft.com/mapi/id/{00062002-0000-0000-C000-000000000046}/82200040";
@@ -22,7 +22,7 @@ namespace Y360OutlookConnector.Utilities
 
         public static byte[] ConvertHexStringToByteArray(string hexString)
         {
-            if (hexString.Length % 2 != 0)
+            if (String.IsNullOrEmpty(hexString) || hexString.Length % 2 != 0)
                 return Array.Empty<byte>();
 
             var formatProvider = CultureInfo.InvariantCulture;
@@ -55,7 +55,7 @@ namespace Y360OutlookConnector.Utilities
                     return text;
                 }
             }
-            return globalId;
+            return globalId ?? String.Empty;
         }
 
         public static bool IsGlobalAppointmentId(string hexString)
@@ -94,9 +94,9 @@ namespace Y360OutlookConnector.Utilities
             {
                 try
                 {
-                    var ownerCtitChangeTime = (DateTime)wrapper.Inner.GetProperty(LID_OWNER_CRITICAL_CHANGE);
-                    if (ownerCtitChangeTime > lastChangeTime)
-                        lastChangeTime = ownerCtitChangeTime;
+                    var ownerCriticalChangeTime = (DateTime)wrapper.Inner.GetProperty(LID_OWNER_CRITICAL_CHANGE);
+                    if (ownerCriticalChangeTime > lastChangeTime)
+                        lastChangeTime = ownerCriticalChangeTime;
 
                 }
                 catch

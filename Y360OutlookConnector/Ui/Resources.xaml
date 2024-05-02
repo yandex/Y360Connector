@@ -1,0 +1,139 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:Y360OutlookConnector.Ui.Converters">
+
+    <!-- Конвертеры -->
+    <converters:BooleanToVisibilityExConverter x:Key="BoolToVisibilityConverter"/>
+    
+    <!-- Используемые цвета -->
+    <Color x:Key="Color.CheckBox.Border.Off">LightGray</Color>
+    <Color x:Key="Color.CheckBox.Background.Off">LightGray</Color>
+    <Color x:Key="Color.CheckBox.Border.On">#FFDC60</Color>
+    <Color x:Key="Color.CheckBox.Background.On">#FFDC60</Color>
+    
+    <!-- Кисти для отрисовки кнопок и переключателей -->
+    <SolidColorBrush x:Key="Button.Static.Background" Color="#FFDC60"/>
+    <SolidColorBrush x:Key="Button.Static.Border" Color="#FFDC60"/>
+    <SolidColorBrush x:Key="Button.MouseOver.Background" Color="#FFD21F"/>
+    <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#FFD21F"/>
+    <SolidColorBrush x:Key="Button.Pressed.Background" Color="#FFCC00"/>
+    <SolidColorBrush x:Key="Button.Pressed.Border" Color="#FFCC00"/>
+    <SolidColorBrush x:Key="Button.Disabled.Background" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="Button.Disabled.Border" Color="#FFADB2B5"/>
+    <SolidColorBrush x:Key="Button.Disabled.Foreground" Color="#FF838383"/>
+
+    <SolidColorBrush x:Key="CheckBox.Off.Border" Color="{StaticResource Color.CheckBox.Border.Off}"/>
+    <SolidColorBrush x:Key="CheckBox.Off.Background" Color="{StaticResource Color.CheckBox.Background.Off}"/>
+    <SolidColorBrush x:Key="CheckBox.Slider.Border" Color="White"/>
+    <SolidColorBrush x:Key="CheckBox.Slider.Background" Color="White"/>
+    
+    <!-- Стиль для CheckBox, имитирующий поведение ToggleSwitch -->
+    <Style x:Key="YandexCheckBox" TargetType="CheckBox">
+        <!-- Переопределение шаблона по умолчанию для CheckBox -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <!-- Главный контейнер, состоящий из двух столбцов: для переключателя и текстовой метки -->
+                    <Grid>
+                        <!-- Определение двух столбцов -->
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Граница вокруг переключателя -->
+                        <Border x:Name="SwitchBorder" Grid.Column="0" Width="32" Height="19" BorderBrush="{StaticResource CheckBox.Off.Border}" BorderThickness="1" CornerRadius="10" Background="{StaticResource CheckBox.Off.Background }">
+                            <!-- Прямоугольник, который действует как сам переключатель -->
+                            <Rectangle x:Name="Switch" Width="14" Height="14" Fill="{StaticResource CheckBox.Slider.Background}" Stroke="{StaticResource CheckBox.Slider.Border}" StrokeThickness="1" RadiusX="7" RadiusY="7" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <!-- Трансформация используется для анимации движения переключателя -->
+                                <Rectangle.RenderTransform>
+                                    <TranslateTransform x:Name="SwitchTranslateTransform"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Border>
+                        <!-- Текстовая метка, показывающая текущее состояние переключателя -->
+                        <TextBlock Grid.Column="1" x:Name="StateLabel" TextWrapping="Wrap" FontSize="{TemplateBinding FontSize}" Text="{TemplateBinding Content}" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        <!-- Группы состояний, определяющие анимации для различных состояний CheckBox -->
+                        <VisualStateManager.VisualStateGroups>
+                            <!-- Группа состояний для включенного и выключенного состояний -->
+                            <VisualStateGroup x:Name="CheckStates">
+                                <!-- Анимации для включенного состояния -->
+                                <VisualState x:Name="Checked">
+                                    <Storyboard>
+                                        <!-- Перемещает переключатель вправо -->
+                                        <DoubleAnimation Storyboard.TargetName="SwitchTranslateTransform" Storyboard.TargetProperty="X" To="16" Duration="0:0:0.2"/>
+                                        <!-- Изменяет цвет переключателя на включено -->
+                                        <ColorAnimation Storyboard.TargetName="SwitchBorder" Storyboard.TargetProperty="Background.Color" To="{StaticResource Color.CheckBox.Background.On }" Duration="0:0:0.2"/>
+                                        <!-- Изменяет цвет границы на #FFDC60 -->
+                                        <ColorAnimation Storyboard.TargetName="SwitchBorder" Storyboard.TargetProperty="BorderBrush.Color" To="{StaticResource Color.CheckBox.Border.On}" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <!-- Анимации для выключенного состояния -->
+                                <VisualState x:Name="Unchecked">
+                                    <Storyboard>
+                                        <!-- Перемещает переключатель влево -->
+                                        <DoubleAnimation Storyboard.TargetName="SwitchTranslateTransform" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.2"/>
+                                        <!-- Изменяет цвет переключателя на выключено -->
+                                        <ColorAnimation Storyboard.TargetName="SwitchBorder" Storyboard.TargetProperty="Background.Color" To="{StaticResource Color.CheckBox.Background.Off}" Duration="0:0:0.2"/>
+                                        <!-- Изменяет цвет границы переключателя на выключено -->
+                                        <ColorAnimation Storyboard.TargetName="SwitchBorder" Storyboard.TargetProperty="BorderBrush.Color" To="{StaticResource Color.CheckBox.Border.Off}" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Стиль для обозначения элемента управления, имеющего фокус -->
+    <Style x:Key="FocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2" SnapsToDevicePixels="true" Stroke="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" StrokeThickness="1" StrokeDashArray="1 2"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Стиль для кнопки с закругленными краями и измененным фоном -->
+    <Style x:Key="YandexButton" TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
+        <Setter Property="Background" Value="{StaticResource Button.Static.Background}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Button.Static.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="border" CornerRadius="5" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                        <ContentPresenter x:Name="contentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsDefaulted" Value="true">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource Button.MouseOver.Background}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource Button.MouseOver.Border}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="true">
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource Button.Pressed.Background}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource Button.Pressed.Border}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource Button.Disabled.Background}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource Button.Disabled.Border}"/>
+                            <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource Button.Disabled.Foreground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+</ResourceDictionary>    

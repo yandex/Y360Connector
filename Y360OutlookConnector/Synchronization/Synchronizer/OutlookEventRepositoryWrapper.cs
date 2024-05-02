@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -93,8 +93,8 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     {
                         if (_configuration.IsCategoryFilterSticky && id.IsKnown || DoesMatchCategoryCriterion(appointment))
                         {
-                            var lastChnageTime = AppointmentItemUtils.GetLastChangeTime(appointment);
-                            result.Add(EntityVersion.Create(id.Id, lastChnageTime));
+                            var lastChangeTime = AppointmentItemUtils.GetLastChangeTime(appointment);
+                            result.Add(EntityVersion.Create(id.Id, lastChangeTime));
                             context.DuplicateEventCleaner.AnnounceAppointment(AppointmentSlim.FromAppointmentItem(appointment));
                         }
                     }

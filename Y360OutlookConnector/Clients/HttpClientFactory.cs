@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -62,7 +62,7 @@ namespace Y360OutlookConnector.Clients
             return new WebDavClient(CreateAuthorizedHttpClient, true, cancelTokenSource);
         }
 
-        private Task<HttpClient> CreateAuthorizedHttpClient()
+        public Task<HttpClient> CreateAuthorizedHttpClient()
         {
             if (_oauthToken == null)
                 throw new ApplicationException("No access token");

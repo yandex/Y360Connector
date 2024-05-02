@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Utilities;
@@ -39,6 +39,8 @@ namespace Y360OutlookConnector.Synchronization
 
         public void AddIncomingInvite(string globalAppointmentId, DateTime lastModificationTime)
         {
+            if (String.IsNullOrEmpty(globalAppointmentId)) return;
+
             lock (_info)
             {
                 var uid = AppointmentItemUtils.ExtractUidFromGlobalId(globalAppointmentId);
@@ -56,6 +58,8 @@ namespace Y360OutlookConnector.Synchronization
 
         public bool FindAndSetAppointmentItemOverriden(string globalAppointmentId, DateTime lastModificationTime)
         {
+            if (String.IsNullOrEmpty(globalAppointmentId)) return false;
+
             lock (_info)
             {
                 var uid = AppointmentItemUtils.ExtractUidFromGlobalId(globalAppointmentId);
@@ -64,7 +68,6 @@ namespace Y360OutlookConnector.Synchronization
 
                 entry.IsAppointmentItemOverriden = true;
                 return true;
-
             }
         }
 

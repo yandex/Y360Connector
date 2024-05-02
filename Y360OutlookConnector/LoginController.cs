@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -61,6 +61,8 @@ namespace Y360OutlookConnector
             using (var client = new HttpClient())
             {
                 var url = $"https://avatars.yandex.net/get-yapic/{avatarId}/islands-75";
+
+                ThisAddIn.RestoreUiContext();
                 using (var stream = await client.GetStreamAsync(url))
                 {
                     using (var fileStream = new FileStream(fileName, FileMode.OpenOrCreate))

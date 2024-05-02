@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -96,7 +96,7 @@ namespace Y360OutlookConnector.Clients
 
             using (var requestMessage = new HttpRequestMessage())
             {
-                requestMessage.RequestUri = url;
+                requestMessage.RequestUri = RebuildUri(url);
                 requestMessage.Method = new HttpMethod(httpMethod);
 
                 if (depth != null)
@@ -186,5 +186,35 @@ namespace Y360OutlookConnector.Clients
                 null);
         }
 
+        // The Uri class does not allow the use of some escaped values in the url path.
+        // The following method allows to fix this problem
+        // (although it is an ugly hack that depends on the version of the dotnet)
+        // See also: https://stackoverflow.com/a/784937
+        internal static Uri RebuildUri(Uri srcUrl)
+        {
+            try
+            {
+                var schemeAndHost = srcUrl.GetLeftPart(UriPartial.Authority);
+                var originalString = srcUrl.OriginalString;
+                if (!originalString.StartsWith(schemeAndHost) || originalString.Length <= schemeAndHost.Length + 1)
+                    return srcUrl;
+
+                var resultUrl = new UriBuilder(srcUrl) { Path = originalString.Substring(schemeAndHost.Length) }.Uri;
+                var flagsFieldInfo = typeof(Uri).GetField("m_Flags", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (flagsFieldInfo == null) return srcUrl;
+
+                ulong flags = (ulong) flagsFieldInfo.GetValue(resultUrl);
+                flags &= ~((ulong) 0x30);
+
+                flagsFieldInfo.SetValue(resultUrl, flags);
+
+                return resultUrl;
+            }
+            catch (Exception exc)
+            {
+                s_logger.Warn("ForceCanonicalPathAndQuery error:", exc);
+                return srcUrl;
+            }
+        }
     }
 }

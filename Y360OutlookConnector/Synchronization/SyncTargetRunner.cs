@@ -74,12 +74,11 @@ namespace Y360OutlookConnector.Synchronization
 
             if (!_data.IsEmpty)
                 _data.FolderMonitor.ItemChanged -= FolderMonitor_ItemChanged;
-
             _data.Reset();
 
             bool isActive = info.Config.Active;
             IFolderMonitor folderMonitor = null;
-            if (!String.IsNullOrEmpty(info.Config.OutlookFolderEntryId))
+            if (isActive && !String.IsNullOrEmpty(info.Config.OutlookFolderEntryId))
             {
                 folderMonitor = _folderMonitorFactory.Create(
                     info.Config.OutlookFolderEntryId, info.Config.OutlookFolderStoreId);

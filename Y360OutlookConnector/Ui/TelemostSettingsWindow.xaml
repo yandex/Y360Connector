@@ -1,0 +1,92 @@
+﻿<UserControl x:Class="Y360OutlookConnector.Ui.TelemostSettingsWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Y360OutlookConnector.Ui.Models" d:DataContext="{d:DesignInstance Type=local:TelemostSettingsModel}"
+             xmlns:localization="clr-namespace:Y360OutlookConnector.Localization"
+             xmlns:converters="clr-namespace:Y360OutlookConnector.Ui.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+       
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Y360OutlookConnector;component/Ui/Resources.xaml" />
+            </ResourceDictionary.MergedDictionaries>            
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Image Grid.Row="0" Height="30" Width="180" Margin="15,12,15,12" HorizontalAlignment="Left" Stretch="Fill"
+                   Source="/Y360OutlookConnector;component/Resources/Logo-Yandex-360.png">
+        </Image>
+        <Separator Grid.Row="1"/>
+        <Grid Grid.Row="2">
+
+            <Grid Margin="15,16,15,20" Visibility="{Binding IsLoggedIn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter},ConverterParameter='Collapsed,Visible'}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock FontSize="14" VerticalAlignment="Top" HorizontalAlignment="Left" Grid.Row="0" Text="{x:Static localization:Strings.Telemost_SettingsWindow_LoginLabelText}" TextWrapping="Wrap"/>
+                <Button Padding="0,12,0,12" TextBlock.FontSize="14" VerticalAlignment="Bottom" Grid.Row="1" Command="{Binding LogIn}" Style="{StaticResource YandexButton}" Content="{x:Static localization:Strings.Telemost_SettingsWindow_LoginButtonText}"/>
+            </Grid>
+
+            <Grid Visibility="{Binding IsLoggedIn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" >
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock FontSize="16" FontWeight="Bold" Margin="15,16,15,0" Grid.Row="0" Text="{x:Static localization:Strings.Telemost_SettingsWindow_TelemostMeetingLabelText}" TextWrapping="Wrap"/>
+
+                <CheckBox Style="{StaticResource ResourceKey=YandexCheckBox}" 
+                          Content="{x:Static localization:Strings.Telemost_SettingsWindow_OnlyEmployeesCheckBoxLabelText}" 
+                          TextBlock.FontSize="14" Margin="15,12,15,0" Grid.Row="1" IsChecked="{Binding IsMeetingInternal}"/>
+
+                <TextBlock FontSize="14" Margin="15,12,15,0" Grid.Row="2" Visibility="{Binding IsMeetingInternal, Converter={StaticResource BoolToVisibilityConverter}}" 
+                           Text="{x:Static localization:Strings.Telemost_SettingsWindow_ExternaUsersWontBeAbleToJoinLabelWarningText}"
+                           Foreground="#999999"
+                           TextWrapping="Wrap"/>
+
+                <Button Padding="0,12,0,12" TextBlock.FontSize="14" Margin="15,10,15,10" VerticalAlignment="Bottom" Grid.Row="3" Command="{Binding CreateOrUpdateMeeting}" 
+                        Content="{Binding IsMeetingCreated, 
+                        Converter={converters:BooleanToTextConverter 
+                                           TextForTrue={x:Static localization:Strings.Telemost_SettingsWindow_SaveSettingsButtonText}, 
+                                           TextForFalse={x:Static localization:Strings.Telemost_SettingsWindow_CreateMeetingButtonText} }}"
+                        Style="{StaticResource YandexButton}"/>
+
+                <Separator Grid.Row="4"/>
+                <Grid Grid.Row="5" VerticalAlignment="Bottom" Margin="15,10,15,20" >
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center"
+                     Width="32" Height="32">
+                        <Ellipse.Fill>
+                            <ImageBrush x:Name="UserAvatarImage" 
+                                ImageSource="{Binding UserAvatar}" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                    <TextBlock FontSize="14" Margin="10,0,0,0" Grid.Row="0" Grid.Column="1" Text="{Binding UserName}" TextWrapping="Wrap"></TextBlock>
+                    <TextBlock FontSize="12" Margin="10,5,0,0" Grid.Row="1" Grid.Column="1" Text="{Binding UserEmail}" Foreground="#999999"  TextWrapping="Wrap"></TextBlock>
+                </Grid>
+            </Grid>
+
+        </Grid>
+    </Grid>
+</UserControl>

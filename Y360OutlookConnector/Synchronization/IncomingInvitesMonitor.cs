@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector.Synchronization
@@ -30,7 +30,7 @@ namespace Y360OutlookConnector.Synchronization
             if (item is Outlook.MeetingItem meetingItem)
             {
                 var appointmentItem = meetingItem.GetAssociatedAppointment(false);
-                if (appointmentItem != null)
+                if (appointmentItem?.GlobalAppointmentID != null)
                 {
                     _invitesInfo.AddIncomingInvite(appointmentItem.GlobalAppointmentID, 
                         appointmentItem.LastModificationTime.ToUniversalTime());

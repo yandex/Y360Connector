@@ -357,6 +357,84 @@
   <data name="SyncConfigWindow_СreatingFolderErrorMessage" xml:space="preserve">
     <value />
   </data>
+  <data name="Telemost_Messages_AuthorizeInTelemostMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_InfoPanelTitle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingCreateErrorMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingCreateForbiddenErrorMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingCreatedMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingCreatingMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingInternalMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingLinkMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingSubject" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingUpdateErrorMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingUpdateForbiddenErrorMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingUpdatedMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_MeetingUpdatingMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Messages_NoInternetErrorMessage" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_CreateMeetingButtonText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_ExternaUsersWontBeAbleToJoinLabelWarningText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_LoginButtonText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_LoginLabelText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_OnlyEmployeesCheckBoxLabelText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_SaveSettingsButtonText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_SettingsWindowTitle" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_SettingsWindow_TelemostMeetingLabelText" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Toolbar_ExternalMeetingButton" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Toolbar_InternalMeetingButton" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Toolbar_RibbonMenuButton" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Telemost_Toolbar_SettingsButton" xml:space="preserve">
+    <value />
+  </data>
   <data name="Toolbar_AboutButton" xml:space="preserve">
     <value />
   </data>

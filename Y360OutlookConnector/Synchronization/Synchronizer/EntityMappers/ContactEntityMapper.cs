@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -257,7 +257,14 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 target.Inner.NickName = String.Empty;
             }
 
-            target.Inner.Sensitivity = CommonEntityMapper.MapPrivacy2To1(source.AccessClassification);
+            try
+            {
+                target.Inner.Sensitivity = CommonEntityMapper.MapPrivacy2To1(source.AccessClassification);
+            }
+            catch (System.Exception exc)
+            {
+                s_logger.Warn($"Failed to ContactItem.Sensitivity: {exc.Message}");
+            }
 
             if (source.Categories.Count > 0)
             {

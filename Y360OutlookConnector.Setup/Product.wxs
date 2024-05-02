@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:netfx="http://schemas.microsoft.com/wix/NetFxExtension">
-    <Product Id="*" Name="Y360 Connector CalDAV/CardDAV" Language="1033"
+    <Product Id="*" Name="Yandex Connector" Language="1033"
            Version="1.0.0.0" Manufacturer="YANDEX LLC"
            UpgradeCode="A3AF9969-D843-449E-913B-60CA62781498">
 
@@ -9,7 +9,7 @@
                  Compressed="yes"
                  InstallScope="perUser"
                  InstallPrivileges="limited"
-                 Description="Y360 Connector !(bind.property.ProductVersion) Installer"
+                 Description="Yandex Connector !(bind.property.ProductVersion) Installer"
                  Comments="(c) 2024 !(bind.property.Manufacturer)"/>
 
         <MajorUpgrade AllowDowngrades="yes" />

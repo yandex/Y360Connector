@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using CalDavSynchronizer.ChangeWatching;
 using log4net;
@@ -32,14 +32,15 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.FolderMonitor
                     {
                         s_logger.Debug($"'{action}': Appointment '{appointment.Subject}' '{appointment.EntryID}' ");
                         entryId = new AppointmentId(new CalDavSynchronizer.Implementation.Events.AppointmentId(
-                            appointment.EntryID, appointment.GlobalAppointmentID),
+                            appointment.EntryID, appointment.GlobalAppointmentID ?? String.Empty),
                             AppointmentItemUtils.GetLastChangeTime(appointment),
                             wasDeleted);
                     }
                     else if (wasDeleted)
                     {
                         var uid = AppointmentItemUtils.ExtractUidFromGlobalId(appointment.GlobalAppointmentID);
-                        _invitesInfo.OnInviteDeleted(uid);
+                        if (!String.IsNullOrEmpty(uid))
+                            _invitesInfo.OnInviteDeleted(uid);
                     }
                     OnItemChanged(entryId);
                 }

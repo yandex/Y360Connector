@@ -1,4 +1,4 @@
-using CalDavSynchronizer.Contracts;
+﻿using CalDavSynchronizer.Contracts;
 using CalDavSynchronizer.Utilities;
 using log4net;
 using log4net.Appender;
@@ -237,13 +237,13 @@ namespace Y360OutlookConnector.Ui
         private void ProxyManualCheckbox_Changed(object sender, RoutedEventArgs e)
         {
             UpdateButtonsPanelVisibility();
-            CleareProxyUrlErrorMessage();
+            ClearProxyUrlErrorMessage();
         }
 
         private void ProxyUrlEdit_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             UpdateButtonsPanelVisibility();
-            CleareProxyUrlErrorMessage();
+            ClearProxyUrlErrorMessage();
         }
 
         private void ProxyUserNameEdit_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
@@ -323,7 +323,7 @@ namespace Y360OutlookConnector.Ui
             }
             else
             {
-                CleareProxyUrlErrorMessage();
+                ClearProxyUrlErrorMessage();
                 result = true;
             }
 
@@ -346,7 +346,7 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
-        private void CleareProxyUrlErrorMessage()
+        private void ClearProxyUrlErrorMessage()
         {
             SetProxyUrlErrorMessage(String.Empty);
         }

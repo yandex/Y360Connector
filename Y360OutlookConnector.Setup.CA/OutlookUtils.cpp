@@ -29,13 +29,6 @@ std::wstring GetOutlookExecutablePath()
 
 int LaunchOutlook()
 {
-    SHELLEXECUTEINFO shellExecInfo = { sizeof(shellExecInfo) };
-
-    shellExecInfo.fMask = SEE_MASK_NOASYNC | SEE_MASK_UNICODE | SEE_MASK_FLAG_NO_UI;
-    shellExecInfo.lpFile = L"outlook.exe";
-    shellExecInfo.lpParameters = L"/recycle";
-    shellExecInfo.nShow = SW_SHOWNORMAL;
-
     return reinterpret_cast<int>(ShellExecute(NULL, NULL, L"outlook.exe", L"/recycle", NULL, SW_SHOWNORMAL));
 }
 

@@ -1856,8 +1856,19 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 MapRecurrance2To1(source, recurrenceExceptionsOrNull, targetWrapper, logger, context);
 
             if (!isRecurrenceException)
-                targetWrapper.Inner.Sensitivity = CommonEntityMapper.MapPrivacy2To1(source.Class,
-                    _configuration.MapClassConfidentialToSensitivityPrivate, _configuration.MapClassPublicToSensitivityPrivate);
+            {
+                try
+                {
+                    var sensitivity = CommonEntityMapper.MapPrivacy2To1(source.Class,
+                        _configuration.MapClassConfidentialToSensitivityPrivate, _configuration.MapClassPublicToSensitivityPrivate);
+                    targetWrapper.Inner.Sensitivity = sensitivity;
+                }
+                catch (System.Exception exc)
+                {
+                    s_logger.Warn($"Failed to update AppointmentItem.Sensitivity: {exc.Message}");
+                }
+            }
+
 
             MapReminder2To1(source, targetWrapper.Inner, isRecurrenceException, logger);
 

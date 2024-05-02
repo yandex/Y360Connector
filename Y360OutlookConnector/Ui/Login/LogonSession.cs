@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -87,9 +87,9 @@ namespace Y360OutlookConnector.Ui.Login
                 { "device_name", Environment.MachineName }
             };
 
+            ThisAddIn.RestoreUiContext();
             var response = await _httpClient.PostAsync(url, new FormUrlEncodedContent(content));
 
-            ThisAddIn.RestoreUiContext();
             if (!response.IsSuccessStatusCode)
             {
                 string result = await response.Content.ReadAsStringAsync();
@@ -123,7 +123,8 @@ namespace Y360OutlookConnector.Ui.Login
                     return null;
                 }
 
-                string responseContent = response.Content.ReadAsStringAsync().Result;
+                ThisAddIn.RestoreUiContext();
+                string responseContent = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<LoginInfo>(responseContent);
             }
         }

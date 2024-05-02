@@ -9,6 +9,10 @@
                 <RegistryValue Name="Description" Value="Y360 Connector Addin" Type="string"/>
             </RegistryKey>
 
+            <RegistryKey Root="HKCU" Key="SOFTWARE\Microsoft\Office\Outlook\FormRegions\IPM.Appointment">
+                <RegistryValue Name="Y360OutlookConnector.TelemostStatusLineRegion" Value="=Y360OutlookConnector" Type="string"/>
+            </RegistryKey>
+            
             <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector">
                 <RegistryValue Name="FirstTime" Value="1" Type="integer"/>
             </RegistryKey>

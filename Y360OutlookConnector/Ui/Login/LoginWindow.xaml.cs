@@ -1,4 +1,4 @@
-using CalDavSynchronizer.Utilities;
+﻿using CalDavSynchronizer.Utilities;
 using log4net;
 using System;
 using System.Reflection;
@@ -67,7 +67,7 @@ namespace Y360OutlookConnector.Ui.Login
             if (_isAuthComplete)
             {
                 Telemetry.Signal(Telemetry.LoginWindowEvents, "auth_complete");
-                s_logger.Info("Login complete");
+                s_logger.Info($"Login complete (username: {UserInfo?.UserName})");
             }
             else
             {

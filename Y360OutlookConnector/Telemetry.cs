@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Yandex.Metrica;
 using Newtonsoft.Json.Linq;
 using log4net;
@@ -19,6 +19,8 @@ namespace Y360OutlookConnector
         public const string SyncConfigWindowEvents = "sync_config_window";
         public const string ErrorWindowEvents = "error_window";
         public const string SyncReportsEvents = "sync_reports";
+        public const string TelemostApiCalls = "telemost_api_calls";
+        public const string TelemostSettingsWindowEvents = "telemost_settings_window";
 
         public static void Initialize(string dataFolder)
         {

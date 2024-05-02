@@ -1,4 +1,4 @@
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!--
     This section defines project-level properties.
@@ -134,6 +134,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -213,6 +214,15 @@
     <Compile Include="Clients\HttpClientErrorHandler.cs" />
     <Compile Include="Clients\HttpClientLoggingHandler.cs" />
     <Compile Include="Clients\IHttpClientFactory.cs" />
+    <Compile Include="Clients\Telemost\HttpClientExtensions.cs" />
+    <Compile Include="Clients\Telemost\Model\ApiCallResult.cs" />
+    <Compile Include="Clients\Telemost\Model\Conference.cs" />
+    <Compile Include="Clients\Telemost\Model\ConferenceData.cs" />
+    <Compile Include="Clients\Telemost\Model\ConferenceDataLiveStream.cs" />
+    <Compile Include="Clients\Telemost\Model\ConferenceShort.cs" />
+    <Compile Include="Clients\Telemost\Model\ConferenceShortLiveStream.cs" />
+    <Compile Include="Clients\Telemost\Model\Error.cs" />
+    <Compile Include="Clients\Telemost\TelemostClient.cs" />
     <Compile Include="Clients\WebDavClient.cs" />
     <Compile Include="ComponentContainer.cs" />
     <Compile Include="Configuration\AppConfig.cs" />
@@ -262,7 +272,14 @@
     <Compile Include="Synchronization\Synchronizer\SynchronizerFactory.cs" />
     <Compile Include="Synchronization\SyncManager.cs" />
     <Compile Include="Synchronization\SyncTargetInfo.cs" />
+    <Compile Include="TaskPaneController.cs" />
     <Compile Include="Telemetry.cs" />
+    <Compile Include="Ui\Commands\AsyncRelayCommand.cs" />
+    <Compile Include="Ui\Commands\IAsyncRelayCommand.cs" />
+    <Compile Include="Ui\Converters\BooleanToTextConverter.cs" />
+    <Compile Include="Ui\Converters\BooleanToVisibilityExConverter.cs" />
+    <Compile Include="Ui\Extensions\BitmapExtensions.cs" />
+    <Compile Include="Ui\ITelemostSettingsControl.cs" />
     <Compile Include="Ui\AboutWindow.xaml.cs">
       <DependentUpon>AboutWindow.xaml</DependentUpon>
     </Compile>
@@ -273,6 +290,9 @@
       <DependentUpon>ErrorWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="ExceptionHandler.cs" />
+    <Compile Include="Ui\Extensions\AppointmentItemExtensions.cs" />
+    <Compile Include="Ui\Extensions\OutlookApplicationExtensions.cs" />
+    <Compile Include="Ui\Extensions\TelemostMeetingInfo.cs" />
     <Compile Include="Ui\Login\ConfirmationCodePage.xaml.cs">
       <DependentUpon>ConfirmationCodePage.xaml</DependentUpon>
     </Compile>
@@ -289,14 +309,33 @@
     <Compile Include="Ui\Login\SevenDigitsBox.xaml.cs">
       <DependentUpon>SevenDigitsBox.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Ui\Login\WebBrowser.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Ui\OutlookWin32Window.cs" />
     <Compile Include="Ui\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Ui\SyncConfigModel.cs" />
+    <Compile Include="Ui\TelemostRibbon.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Ui\TelemostRibbon.Designer.cs">
+      <DependentUpon>TelemostRibbon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Models\TelemostSettingsModel.cs" />
+    <Compile Include="Ui\TelemostSettingsWindow.xaml.cs">
+      <DependentUpon>TelemostSettingsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\TelemostStatusLineRegion.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Ui\TelemostStatusLineRegion.Designer.cs">
+      <DependentUpon>TelemostStatusLineRegion.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\TelemostWpfSettingsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Ui\TelemostWpfSettingsControl.Designer.cs">
+      <DependentUpon>TelemostWpfSettingsControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="Ui\Throbber.xaml.cs">
       <DependentUpon>Throbber.xaml</DependentUpon>
     </Compile>
@@ -305,6 +344,10 @@
     </Compile>
     <Compile Include="Ui\SyncConfigWindow.xaml.cs">
       <DependentUpon>SyncConfigWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\WebView\NativeMethods.cs" />
+    <Compile Include="Ui\WebView\WebView.xaml.cs">
+      <DependentUpon>WebView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Ui\Y360ConnectorRibbon.cs">
       <SubType>Component</SubType>
@@ -333,6 +376,15 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="Ui\TelemostRibbon.resx">
+      <DependentUpon>TelemostRibbon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Ui\TelemostStatusLineRegion.resx">
+      <DependentUpon>TelemostStatusLineRegion.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Ui\TelemostWpfSettingsControl.resx">
+      <DependentUpon>TelemostWpfSettingsControl.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Ui\Y360ConnectorRibbon.resx">
       <DependentUpon>Y360ConnectorRibbon.cs</DependentUpon>
     </EmbeddedResource>
@@ -427,6 +479,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Ui\Resources.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Ui\TelemostSettingsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Ui\Throbber.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -436,6 +496,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Ui\SyncConfigWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\WebView\WebView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -472,6 +536,17 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Attention.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\TelemostExternalMeeting.png" />
+    <Resource Include="Resources\TelemostInternalMeeting.png" />
+    <Resource Include="Resources\TelemostSettings.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Yandex-telemost-2022.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Logo-Yandex-360.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

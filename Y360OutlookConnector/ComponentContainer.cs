@@ -6,6 +6,7 @@ using Y360OutlookConnector.Clients;
 using Y360OutlookConnector.Ui;
 using Y360OutlookConnector.Ui.Login;
 using Outlook = Microsoft.Office.Interop.Outlook;
+using Y360OutlookConnector.Clients.Telemost;
 
 namespace Y360OutlookConnector
 {
@@ -15,9 +16,12 @@ namespace Y360OutlookConnector
 
         public AutoUpdateManager AutoUpdateManager { get; private set; }
         public LoginController LoginController { get; }
+        public TaskPaneController PaneController { get; }
         public ProxyOptionsProvider ProxyOptionsProvider { get; }
-        public Outlook.Application OutlookApplication { get => Globals.ThisAddIn.Application; }
+        public Outlook.Application OutlookApplication { get; }
         public SyncStatus SyncStatus { get => _syncManager.Status; }
+
+        public TelemostClient TelemostClient { get; }
 
         private readonly SyncManager _syncManager;
         private readonly HttpClientFactory _httpClientFactory;
@@ -25,10 +29,14 @@ namespace Y360OutlookConnector
 
         public ComponentContainer(Outlook.Application application)
         {
+            OutlookApplication = application;
+
             var profileDataFolderPath = DataFolder.GetPathForProfile(application.Session.CurrentProfileName);
 
             LoginController = new LoginController(profileDataFolderPath);
             LoginController.LoginStateChanged += LoginController_LoginStateChanged;
+
+            PaneController = new TaskPaneController();
 
             ProxyOptionsProvider = new ProxyOptionsProvider(profileDataFolderPath);
             _httpClientFactory = new HttpClientFactory(ProxyOptionsProvider);
@@ -37,6 +45,8 @@ namespace Y360OutlookConnector
             AutoUpdateManager = new AutoUpdateManager(ProxyOptionsProvider, application);
             AutoUpdateManager.UpdateStateChanged += AutoUpdateManager_UpdateStateChanged;
             AutoUpdateManager.Launch();
+
+            TelemostClient = new TelemostClient(_httpClientFactory);
 
             var invitesInfo = new InvitesInfoStorage(profileDataFolderPath);
             _invitesMonitor = new IncomingInvitesMonitor(application, invitesInfo);
@@ -48,9 +58,11 @@ namespace Y360OutlookConnector
             _syncManager.Launch();
         }
 
-        private void LoginController_LoginStateChanged(object sender, LoginStateEventArgs e)
+        private async void LoginController_LoginStateChanged(object sender, LoginStateEventArgs e)
         {
             UpdateHttpClientFactory();
+
+            await PaneController.OnLoginStateChangedAsync(e.IsUserLoggedIn);
         }
 
         private void AutoUpdateManager_UpdateStateChanged(object sender, EventArgs e)
@@ -73,7 +85,7 @@ namespace Y360OutlookConnector
                 s_logger.Info("Login started");
 
                 var loginWindow = new LoginWindow(_httpClientFactory);
-                loginWindow.ShowDialog(OutlookApplication.ActiveExplorer());
+                loginWindow.ShowDialog(OutlookApplication.ActiveWindow());
 
                 if (loginWindow.UserInfo == null) return;
 
@@ -107,7 +119,7 @@ namespace Y360OutlookConnector
             s_logger.Info("Show about window");
 
             var aboutWindow = new AboutWindow();
-            aboutWindow.ShowDialog(OutlookApplication.ActiveExplorer());
+            aboutWindow.ShowDialog(OutlookApplication.ActiveWindow());
         }
 
         private void UpdateHttpClientFactory()
@@ -126,6 +138,7 @@ namespace Y360OutlookConnector
             _invitesMonitor.Dispose();
             _syncManager.Dispose();
             AutoUpdateManager.Dispose();
+            PaneController.Dispose();
             Telemetry.Shutdown();
 
             s_logger.Info("ComponentContainer disposed");

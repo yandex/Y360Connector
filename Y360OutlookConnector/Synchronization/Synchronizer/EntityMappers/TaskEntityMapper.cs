@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -391,7 +391,14 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             if (_configuration.MapPriority)
                 target.Inner.Importance = CommonEntityMapper.MapPriority2To1(source.Priority);
 
-            target.Inner.Sensitivity = CommonEntityMapper.MapPrivacy2To1(source.Class, false, false);
+            try
+            {
+                target.Inner.Sensitivity = CommonEntityMapper.MapPrivacy2To1(source.Class, false, false);
+            }
+            catch (System.Exception exc)
+            {
+                s_logger.Warn($"Failed to update TaskItem.Sensitivity: {exc.Message}");
+            }
 
             MapCategories2To1(source, target);
 

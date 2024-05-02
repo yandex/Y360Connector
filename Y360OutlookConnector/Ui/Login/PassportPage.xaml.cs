@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Specialized;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using log4net;
+using Y360OutlookConnector.Ui.WebView;
 
 namespace Y360OutlookConnector.Ui.Login
 {
@@ -45,54 +45,47 @@ namespace Y360OutlookConnector.Ui.Login
 
             InitializeComponent();
 
-            SetSuppressCookie(true);
-            Unloaded += PassportPage_Unloaded;
             Loaded += PassportPage_Loaded;
         }
 
         private void PassportPage_Loaded(object sender, RoutedEventArgs args)
         {
-            webBrowser.IsWebBrowserContextMenuEnabled = false;
-            webBrowser.ScriptErrorsSuppressed = true;
-            webBrowser.AllowWebBrowserDrop = false;
+            webView.ScriptErrorsSuppressed = true;
+            webView.AllowWebBrowserDrop = true;
 
-            webBrowser.Navigating += WebBrowser_Navigating;
-            webBrowser.Navigated += WebBrowser_Navigated;
-            webBrowser.DocumentCompleted += WebBrowser_DocumentCompleted;
-            webBrowser.NavigateError += WebBrowser_NavigateError;
-            webBrowser.NewWindow += (o, e) => { e.Cancel = true; };
+            webView.Navigating += WebView_Navigating;
+            webView.DocumentCompleted += WebView_DocumentCompleted;
+            webView.NavigateError += WebView_NavigateError;
 
             var passportUrl = _logonSession.GetPassportUrl();
-            webBrowser.Navigate(passportUrl);
-            webBrowser.Focus();
+            webView.Navigate(passportUrl);
+            webView.Focus();
         }
 
-        private static void PassportPage_Unloaded(object sender, RoutedEventArgs e)
+        private void WebView_DocumentCompleted(object sender, WebViewDocumentCompletedEventArgs e)
         {
-            SetSuppressCookie(false);
-        }
+            s_logger.Debug($"Document completed: {e.Url}");
 
-        private void WebBrowser_DocumentCompleted(object sender, System.Windows.Forms.WebBrowserDocumentCompletedEventArgs e)
-        {
             if (IsUrlLike(e.Url, "passport.yandex.*/redirect*")
-                || IsUrlLike(e.Url, "oauth.yandex.*/authorize*")
                 || _hasNavigateError)
             {
                 throbber.Visibility = Visibility.Visible;
-                webBrowserHost.Visibility = Visibility.Hidden;
+                webView.Visibility = Visibility.Hidden;
             }
             else
             {
                 throbber.Visibility = Visibility.Collapsed;
-                webBrowserHost.Visibility = Visibility.Visible;
+                webView.Visibility = Visibility.Visible;
             }
 
-            webBrowser.Focus();
+            webView.Focus();
             _hasNavigateError = false;
         }
 
-        private void WebBrowser_Navigating(object sender, System.Windows.Forms.WebBrowserNavigatingEventArgs e)
+        private void WebView_Navigating(object sender, WebViewNavigatingEventArgs e)
         {
+            s_logger.Debug($"Navigating: {e.Url}");
+
             if (IsUrlLike(e.Url, "oauth.yandex.*/verification_code*"))
             {
                 var queryParams = ParseQuery(e.Url.Query);
@@ -110,12 +103,7 @@ namespace Y360OutlookConnector.Ui.Login
             }
         }
 
-        private void WebBrowser_Navigated(object sender, System.Windows.Forms.WebBrowserNavigatedEventArgs e)
-        {
-
-        }
-
-        private void WebBrowser_NavigateError(object sender, WebBrowser.NavigateErrorEventArgs e)
+        private void WebView_NavigateError(object sender, WebViewNavigateErrorEventArgs e)
         {
             var errorCodeDesc = e.StatusCode < 0 ? $"0x{e.StatusCode:x}" : $"status {e.StatusCode}";
             s_logger.Error($"Navigate error ({errorCodeDesc}): {e.Url}");
@@ -155,26 +143,6 @@ namespace Y360OutlookConnector.Ui.Login
                 result.Add(key, value);
             }
             return result;
-        }
-
-        [DllImport("wininet.dll", SetLastError = true)]
-        private static extern bool InternetSetOption(IntPtr hInternet, int dwOption,
-            IntPtr lpBuffer, int lpdwBufferLength);
-
-        private static void SetSuppressCookie(bool value)
-        {
-            const int INTERNET_OPTION_SUPPRESS_BEHAVIOR = 81;
-            const int INTERNET_SUPPRESS_COOKIE_PERSIST = 3;
-            const int INTERNET_SUPPRESS_COOKIE_PERSIST_RESET = 4;
-
-            int dwOption = INTERNET_OPTION_SUPPRESS_BEHAVIOR;
-            int option = value ? INTERNET_SUPPRESS_COOKIE_PERSIST : INTERNET_SUPPRESS_COOKIE_PERSIST_RESET;
-
-            IntPtr optionPtr = Marshal.AllocHGlobal(sizeof(int));
-            Marshal.WriteInt32(optionPtr, option);
-
-            InternetSetOption(IntPtr.Zero, dwOption, optionPtr, sizeof(int));
-            Marshal.FreeHGlobal(optionPtr);
         }
     }
 }

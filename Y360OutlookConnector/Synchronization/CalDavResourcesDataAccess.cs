@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
@@ -199,7 +199,7 @@ namespace Y360OutlookConnector.Synchronization
         {
             XmlNode ctagNode = xmlElement.SelectSingleNode("D:propstat/D:prop/CS:getctag", nsManager);
             var ctag = ctagNode?.InnerText;
-            return ctag != null ? ctag : String.Empty;
+            return ctag ?? String.Empty;
         }
     }
 }
