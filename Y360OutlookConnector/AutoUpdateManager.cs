@@ -1,3 +1,9 @@
+﻿#if DEBUG
+//you have nothing to do here but c# requires it
+#else
+#define NOT_DEBUG //define a symbol specifying a non debug environment
+#endif
+
 using System;
 using System.Reflection;
 using log4net;
@@ -137,6 +143,7 @@ namespace Y360OutlookConnector
             }
         }
 
+        [Conditional("NOT_DEBUG")]
         private void CheckUpdate()
         {
             ChangeState(UpdateState.Checking);
@@ -148,7 +155,7 @@ namespace Y360OutlookConnector
             var lastVersionInfo = GetLastVersionInfo();
             if (lastVersionInfo.Version != null && lastVersionInfo.Version > installedVersion)
             {
-                s_logger.Info($"New version found: {lastVersionInfo.Version}");
+                s_logger.Info($"New version found: {lastVersionInfo.Version}, installed version: {installedVersion}");
 
                 string installerFileName = DownloadInstaller(lastVersionInfo);
                 if (InstallUpdate(installerFileName, lastVersionInfo.Version))
@@ -312,7 +319,9 @@ namespace Y360OutlookConnector
                 if (String.Equals(installationPath, registrationPath, StringComparison.InvariantCultureIgnoreCase))
                 {
                     string fileName = Assembly.GetExecutingAssembly().ManifestModule.Name;
-                    var versionInfo = FileVersionInfo.GetVersionInfo(Path.Combine(installationPath, fileName));
+                    var installFullPath = Path.Combine(installationPath, fileName);
+                    s_logger.Info($"Installed version path: {installFullPath}");
+                    var versionInfo = FileVersionInfo.GetVersionInfo(installFullPath);
                     result = new Version(versionInfo.ProductVersion);
                 }
                 else

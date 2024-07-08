@@ -148,16 +148,20 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     lastModificationTime = OutlookUtility.OUTLOOK_DATE_NONE;
                 }
 
-                if (GetDateTime(row, LID_OWNER_CRITICAL_CHANGE, false, out DateTime ownerCriticalChange)
-                    && (lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || ownerCriticalChange > lastModificationTime))
+                if (GetDateTime(row, LID_OWNER_CRITICAL_CHANGE, false, out DateTime ownerCriticalChange) && ownerCriticalChange != OutlookUtility.OUTLOOK_DATE_NONE)
                 {
-                    lastModificationTime = ownerCriticalChange;
+                    if(lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || ownerCriticalChange > lastModificationTime)
+                    {
+                        lastModificationTime = ownerCriticalChange;
+                    }                    
                 }
 
-                if (GetDateTime(row, PidLidAppointmentReplyTime, false, out DateTime appointmentReplyTime)
-                    && (lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || appointmentReplyTime > lastModificationTime))
+                if (GetDateTime(row, PidLidAppointmentReplyTime, false, out DateTime appointmentReplyTime) && appointmentReplyTime != OutlookUtility.OUTLOOK_DATE_NONE)
                 {
-                    lastModificationTime = appointmentReplyTime;
+                    if (lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || appointmentReplyTime > lastModificationTime)
+                    {
+                        lastModificationTime = appointmentReplyTime;
+                    }
                 }
 
                 var startObject = row[StartColumnId];

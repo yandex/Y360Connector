@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Synchronization.Progress
@@ -16,8 +16,10 @@ namespace Y360OutlookConnector.Synchronization.Progress
         private int _progressMaximum = 0;
         private int _progressValue = 0;
 
-        public SyncSessionProgress(TotalProgressFactory progressFactory)
+        private bool _wasManuallyTriggered;
+        public SyncSessionProgress(TotalProgressFactory progressFactory, bool wasManuallyTriggered)
         {
+            _wasManuallyTriggered = wasManuallyTriggered;
             _progressFactory = progressFactory;
             _progressFactory?.OnSyncSessionStarted(this);
         }
@@ -69,7 +71,11 @@ namespace Y360OutlookConnector.Synchronization.Progress
 
                     if (totalEntitiesBeingLoaded >= 25 && _progressWindow == null)
                     {
-                        _progressWindow = new Ui.ProgressWindow();
+                        // При автообновлении окно прогресса не показывается поверх остальных окон. Оно создается в минимизированном состоянии
+                        _progressWindow = new Ui.ProgressWindow
+                        {
+                            WindowState = _wasManuallyTriggered ? System.Windows.WindowState.Normal : System.Windows.WindowState.Minimized
+                        };
                         _progressWindow.SetCurrentSyncKind(_currentSyncRunnerKind);
                         _progressWindow.Show();
                     }

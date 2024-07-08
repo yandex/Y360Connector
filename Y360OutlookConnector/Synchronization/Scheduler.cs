@@ -101,7 +101,7 @@ namespace Y360OutlookConnector.Synchronization
             _isFullSyncRunning = true;
             try
             {
-                using (var syncSession = new SyncSessionProgress(_totalProgressFactory))
+                using (var syncSession = new SyncSessionProgress(_totalProgressFactory, wasManuallyTriggered))
                 {
                     var alreadyRan = new HashSet<Guid>();
                     while (true)
