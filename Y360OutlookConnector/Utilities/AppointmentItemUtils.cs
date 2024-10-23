@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using CalDavSynchronizer.Implementation.Common;
 using CalDavSynchronizer.Implementation.ComWrappers;
+using log4net;
+using Microsoft.Office.Interop.Outlook;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 
@@ -10,6 +15,8 @@ namespace Y360OutlookConnector.Utilities
 {
     public static class AppointmentItemUtils
     {
+        private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
         // https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxocal/1d3aac05-a7b9-45cc-a213-47f0a0a2c5c1
 
         private static readonly byte[] GlobalObjectIdHeader = { 0x04, 0x00, 0x00, 0x00, 0x82, 0x00, 0xE0, 0x00, 
@@ -118,5 +125,70 @@ namespace Y360OutlookConnector.Utilities
 
             return lastChangeTime;
         }
+
+        public static string CreateCalendarUrl(this AppointmentItem appointment, Uri eventUrl, string userId, string layerId, bool isEventSequence)
+        {
+            var urlBuilder = new UriBuilder(eventUrl);
+
+            var extraParameters = new Dictionary<string, string>
+            {
+                ["layerId"] = layerId
+            };
+           
+            if (!string.IsNullOrEmpty(userId))
+            {
+                extraParameters["uid"] = userId;
+            }
+
+            var startDate = appointment.Start.Date;
+            var lastMonday = startDate.AddDays(-(startDate.DayOfWeek - DayOfWeek.Monday));
+
+            extraParameters["show_date"] = lastMonday.ToString("yyyy-MM-dd");
+            extraParameters["event_date"] = appointment.StartUTC.ToString("yyyy-MM-ddTHH:mm:00");
+            extraParameters["applyToFuture"] = isEventSequence ? "1" : "0";
+
+            var extraQueryString = string.Join("&", extraParameters.Select(p => $"{WebUtility.UrlEncode(p.Key)}={WebUtility.UrlEncode(p.Value)}"));
+
+            if (string.IsNullOrEmpty(urlBuilder.Query))
+            {
+                urlBuilder.Query = extraQueryString;
+            }
+            else
+            {
+                urlBuilder.Query = $"{urlBuilder.Query.Substring(1)}&{extraQueryString}";
+            }
+
+            return urlBuilder.ToString();
+        }
+
+        public static Folder GetFolder(this AppointmentItem appointment)
+        {
+            var isRecurring = appointment.IsRecurring;
+
+            if (!isRecurring)
+            {
+                return appointment.Parent as Folder;
+            }
+
+            var recurrenceState = appointment.GetRecurrenceState();
+            switch (recurrenceState)
+            {
+                case OlRecurrenceState.olApptMaster:
+                    // Серия целиком
+                    return appointment.Parent as Folder;
+                case OlRecurrenceState.olApptException:
+                case OlRecurrenceState.olApptOccurrence:
+                    // Событие в серии
+                    if (!(appointment.Parent is AppointmentItem parentEvent))
+                    {
+                        return null;
+                    }
+                    return parentEvent.Parent as Folder;
+            }
+
+            return null;
+        }
+
+        public static OlRecurrenceState GetRecurrenceState(this AppointmentItem appointment) => appointment.RecurrenceState;        
     }
 }

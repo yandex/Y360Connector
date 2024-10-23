@@ -7,6 +7,10 @@ using Y360OutlookConnector.Ui;
 using Y360OutlookConnector.Ui.Login;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Y360OutlookConnector.Clients.Telemost;
+using System.Net;
+using log4net.Repository.Hierarchy;
+using log4net.Core;
+using Y360OutlookConnector.Utilities;
 
 namespace Y360OutlookConnector
 {
@@ -18,6 +22,7 @@ namespace Y360OutlookConnector
         public LoginController LoginController { get; }
         public TaskPaneController PaneController { get; }
         public ProxyOptionsProvider ProxyOptionsProvider { get; }
+        public GeneralOptionsProvider GeneralOptionsProvider { get; }
         public Outlook.Application OutlookApplication { get; }
         public SyncStatus SyncStatus { get => _syncManager.Status; }
 
@@ -27,11 +32,17 @@ namespace Y360OutlookConnector
         private readonly HttpClientFactory _httpClientFactory;
         private readonly IncomingInvitesMonitor _invitesMonitor;
 
+        public SyncManager SyncManager => _syncManager;
         public ComponentContainer(Outlook.Application application)
         {
+            // Минимальная версия TLS 1.2, так как устаревшие версии протокола могут быть заблокированы в сети пользователя
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             OutlookApplication = application;
 
             var profileDataFolderPath = DataFolder.GetPathForProfile(application.Session.CurrentProfileName);
+
+            GeneralOptionsProvider = new GeneralOptionsProvider(profileDataFolderPath);
+            LoggingUtils.ConfigureLogLevel(GeneralOptionsProvider.Options.UseDebugLevelLogging);
 
             LoginController = new LoginController(profileDataFolderPath);
             LoginController.LoginStateChanged += LoginController_LoginStateChanged;
@@ -93,6 +104,7 @@ namespace Y360OutlookConnector
                 {
                     AccessToken = loginWindow.AccessToken,
                     UserName = loginWindow.UserInfo.UserName,
+                    UserId = loginWindow.UserInfo.UserId,
                     Email = loginWindow.UserInfo.DefaultEmail,
                     RealName = loginWindow.UserInfo.RealName,
                     DefaultAvatarId = loginWindow.UserInfo.IsAvatarEmpty ? "" : loginWindow.UserInfo.DefaultAvatarId

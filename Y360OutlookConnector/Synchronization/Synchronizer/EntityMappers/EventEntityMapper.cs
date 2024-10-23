@@ -225,12 +225,13 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 }
                 else if (_configuration.UseIanaTz)
                 {
-                    var startInstant = Instant.FromDateTimeUtc(source.Start.ToUniversalTime());
+                    // StartUTC и EndUTC имеют тип Unspecified. Необходимо явно установить тип Utc
+                    var startInstant = Instant.FromDateTimeUtc(DateTime.SpecifyKind(source.StartUTC, DateTimeKind.Utc));
                     var startTimeZone = DateTimeZoneProviders.Tzdb[startIcalTimeZone.TZID];
                     var zonedStart = startInstant.InZone(startTimeZone);
                     target.Start = new iCalDateTime(zonedStart.ToDateTimeUnspecified());
                     target.Start.SetTimeZone(startIcalTimeZone);
-                    var endInstant = Instant.FromDateTimeUtc(source.End.ToUniversalTime());
+                    var endInstant = Instant.FromDateTimeUtc(DateTime.SpecifyKind(source.EndUTC, DateTimeKind.Utc));
                     var endTimeZone = DateTimeZoneProviders.Tzdb[endIcalTimeZone.TZID];
                     var zonedEnd = endInstant.InZone(endTimeZone);
                     target.End = new iCalDateTime(zonedEnd.ToDateTimeUnspecified());

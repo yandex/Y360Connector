@@ -219,6 +219,12 @@
   <data name="SettingsWindow_CancelButton" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="SettingsWindow_GeneralSettingsPanelTitle" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="SettingsWindow_IncludeDebugLevelInfo" xml:space="preserve">
+    <value>Include debug info</value>
+  </data>
   <data name="SettingsWindow_LogClearLink" xml:space="preserve">
     <value>Clear</value>
   </data>
@@ -272,6 +278,9 @@
   </data>
   <data name="SettingsWindow_ProxyUserName" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="SettingsWindow_UseExternalBrowserForLogin" xml:space="preserve">
+    <value>Use an external browser to log in</value>
   </data>
   <data name="SettingsWindow_UserLogoutDesc" xml:space="preserve">
     <value>You need to log in to your account</value>
@@ -385,7 +394,7 @@ Select a folder with elements of the "Tasks" type</value>
     <value>Only company employees can join the meeting. </value>
   </data>
   <data name="Telemost_Messages_MeetingLinkMessage" xml:space="preserve">
-    <value>Link to the video meeting: {0} </value>
+    <value>Link to the video meeting: {0}.</value>
   </data>
   <data name="Telemost_Messages_MeetingSubject" xml:space="preserve">
     <value>Video meeting in Yandex Telemost</value>
@@ -467,5 +476,14 @@ Select a folder with elements of the "Tasks" type</value>
   </data>
   <data name="Toolbar_SyncTargetsButton" xml:space="preserve">
     <value>Events, tasks, and contacts</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_EditEventButton" xml:space="preserve">
+    <value>Редактировать событие</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_NavigateToCalendarButton" xml:space="preserve">
+    <value>Перейти в Календарь</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_RibbonToolbarButton" xml:space="preserve">
+    <value>Yandex Calendar</value>
   </data>
 </root>

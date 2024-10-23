@@ -227,6 +227,8 @@
     <Compile Include="ComponentContainer.cs" />
     <Compile Include="Configuration\AppConfig.cs" />
     <Compile Include="Configuration\DataFolder.cs" />
+    <Compile Include="Configuration\GeneralOptions.cs" />
+    <Compile Include="Configuration\GeneralOptionsProvider.cs" />
     <Compile Include="Configuration\ProxyOptionsProvider.cs" />
     <Compile Include="Configuration\RegistrySettings.cs" />
     <Compile Include="Configuration\SyncConfig.cs" />
@@ -250,10 +252,15 @@
     <Compile Include="Synchronization\Progress\SyncSessionProgress.cs" />
     <Compile Include="Synchronization\Progress\TotalProgressFactory.cs" />
     <Compile Include="Synchronization\IncomingInvitesMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\EventServerEntityMatchData.cs" />
+    <Compile Include="Synchronization\Synchronizer\EventServerEntityMatchDataFactory.cs" />
     <Compile Include="Synchronization\Synchronizer\FolderMonitor\AppointmentFolderMonitor.cs" />
     <Compile Include="Synchronization\Synchronizer\FolderMonitor\FolderMonitorBase.cs" />
     <Compile Include="Synchronization\Synchronizer\FolderMonitor\GenericFolderMonitor.cs" />
     <Compile Include="Synchronization\Synchronizer\FolderMonitor\IFolderMonitor.cs" />
+    <Compile Include="Synchronization\Synchronizer\GlobalTimeZoneCache.cs" />
+    <Compile Include="Synchronization\Synchronizer\InitialEventEntityMatcher.cs" />
+    <Compile Include="Synchronization\Synchronizer\TimeZoneCache.cs" />
     <Compile Include="Synchronization\Synchronizer\States\CreateInBWith404Fallback.cs" />
     <Compile Include="Synchronization\Synchronizer\EntityMappers\ContactEntityMapper.cs" />
     <Compile Include="Synchronization\Synchronizer\EntityMappers\EventEntityMapper.cs" />
@@ -279,6 +286,9 @@
     <Compile Include="Ui\Converters\BooleanToTextConverter.cs" />
     <Compile Include="Ui\Converters\BooleanToVisibilityExConverter.cs" />
     <Compile Include="Ui\Extensions\BitmapExtensions.cs" />
+    <Compile Include="Utilities\CalendarUtils.cs" />
+    <Compile Include="Utilities\LoggingUtils.cs" />
+    <Compile Include="Utilities\SyncTargetConfigExtensions.cs" />
     <Compile Include="Ui\ITelemostSettingsControl.cs" />
     <Compile Include="Ui\AboutWindow.xaml.cs">
       <DependentUpon>AboutWindow.xaml</DependentUpon>
@@ -314,11 +324,11 @@
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Ui\SyncConfigModel.cs" />
-    <Compile Include="Ui\TelemostRibbon.cs">
+    <Compile Include="Ui\AppointmentRibbon.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Ui\TelemostRibbon.Designer.cs">
-      <DependentUpon>TelemostRibbon.cs</DependentUpon>
+    <Compile Include="Ui\AppointmentRibbon.Designer.cs">
+      <DependentUpon>AppointmentRibbon.cs</DependentUpon>
     </Compile>
     <Compile Include="Ui\Models\TelemostSettingsModel.cs" />
     <Compile Include="Ui\TelemostSettingsWindow.xaml.cs">
@@ -358,14 +368,18 @@
     <Compile Include="Utilities\AppointmentItemUtils.cs" />
     <Compile Include="Utilities\EmailAddress.cs" />
     <Compile Include="Utilities\RollingLogAppender.cs" />
+    <Compile Include="Utilities\WebDavClientExtensions.cs" />
     <EmbeddedResource Include="Localization\Strings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Localization\Strings.ru-RU.resx">
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="Localization\Strings.en-US.resx" />
+    <EmbeddedResource Include="Localization\Strings.en-US.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -376,8 +390,8 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="Ui\TelemostRibbon.resx">
-      <DependentUpon>TelemostRibbon.cs</DependentUpon>
+    <EmbeddedResource Include="Ui\AppointmentRibbon.resx">
+      <DependentUpon>AppointmentRibbon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Ui\TelemostStatusLineRegion.resx">
       <DependentUpon>TelemostStatusLineRegion.cs</DependentUpon>
@@ -547,6 +561,11 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Logo-Yandex-360.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\Calendar.png" />
+    <Content Include="Resources\Edit.png" />
+    <Content Include="Resources\YandexCalendar.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

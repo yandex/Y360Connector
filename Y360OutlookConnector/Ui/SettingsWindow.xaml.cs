@@ -22,7 +22,7 @@ namespace Y360OutlookConnector.Ui
     {
         private ProxyOptions _proxyOptions;
 
-        private static readonly ILog s_logger = LogManager.GetLogger(MethodInfo.GetCurrentMethod().DeclaringType);
+        private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private static SettingsWindow s_instance;
 
@@ -40,8 +40,10 @@ namespace Y360OutlookConnector.Ui
             }
 
             var proxyOptions = ThisAddIn.Components?.ProxyOptionsProvider.GetProxyOptions();
+            var generalOptions = ThisAddIn.Components?.GeneralOptionsProvider.Options;
 
             SetProxyOption(proxyOptions);
+            SetGeneralOption(generalOptions);
 
             if (ThisAddIn.Components != null)
                 ThisAddIn.Components.SyncStatus.CriticalErrorChanged += SyncStatus_CriticalErrorChanged;
@@ -111,6 +113,45 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
+        #region General settings
+
+        private void SetGeneralOption(GeneralOptions options)
+        {
+            IncludeDebugLevelInfoCheckbox.IsChecked = options.UseDebugLevelLogging;
+            UseExternalBrowserForLoginCheckbox.IsChecked = options.IsExternalBrowserUsedInLogin;
+        }
+
+        private void IncludeDebugLevelInfoCheckbox_Changed(object sender, RoutedEventArgs e)
+        {
+            var provider = ThisAddIn.Components?.GeneralOptionsProvider;
+
+            var useDebugLevel = IncludeDebugLevelInfoCheckbox.IsChecked ?? false;
+
+            LoggingUtils.ConfigureLogLevel(useDebugLevel);
+
+            if (provider != null)
+            {
+                var options = provider.Options.Clone();
+                options.UseDebugLevelLogging = useDebugLevel;
+                provider.Options = options;
+            }
+        }
+
+        private void UseExternalBrowserForLoginCheckbox_Changed(object sender, RoutedEventArgs e)
+        {
+            var provider = ThisAddIn.Components?.GeneralOptionsProvider;
+
+            var useExternalBrowserForLogin = UseExternalBrowserForLoginCheckbox.IsChecked ?? false;
+
+            if (provider != null)
+            {
+                var options = provider.Options.Clone();
+                options.IsExternalBrowserUsedInLogin = useExternalBrowserForLogin;
+                provider.Options = options;
+            }
+        }
+
+        #endregion
         private void SetProxyOption(ProxyOptions proxyOptions)
         {
             _proxyOptions = proxyOptions ?? new ProxyOptions { ProxyUseDefault = true };

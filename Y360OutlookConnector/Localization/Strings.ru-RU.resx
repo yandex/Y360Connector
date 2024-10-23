@@ -219,6 +219,12 @@
   <data name="SettingsWindow_CancelButton" xml:space="preserve">
     <value>Отмена</value>
   </data>
+  <data name="SettingsWindow_GeneralSettingsPanelTitle" xml:space="preserve">
+    <value>Общие</value>
+  </data>
+  <data name="SettingsWindow_IncludeDebugLevelInfo" xml:space="preserve">
+    <value>Включить отладочную информацию</value>
+  </data>
   <data name="SettingsWindow_LogClearLink" xml:space="preserve">
     <value>Очистить</value>
   </data>
@@ -272,6 +278,9 @@
   </data>
   <data name="SettingsWindow_ProxyUserName" xml:space="preserve">
     <value>Имя</value>
+  </data>
+  <data name="SettingsWindow_UseExternalBrowserForLogin" xml:space="preserve">
+    <value>Использовать внешний браузер для входа</value>
   </data>
   <data name="SettingsWindow_UserLogoutDesc" xml:space="preserve">
     <value>Необходимо войти в аккаунт</value>
@@ -385,7 +394,7 @@
     <value>Присоединиться смогут только сотрудники организации. </value>
   </data>
   <data name="Telemost_Messages_MeetingLinkMessage" xml:space="preserve">
-    <value>Ссылка на видеовстречу: {0} </value>
+    <value>Ссылка на видеовстречу:  {0}.</value>
   </data>
   <data name="Telemost_Messages_MeetingSubject" xml:space="preserve">
     <value>Видеовстреча в Яндекс Телемосте</value>
@@ -467,5 +476,14 @@
   </data>
   <data name="Toolbar_SyncTargetsButton" xml:space="preserve">
     <value>События, задачи и контакты</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_EditEventButton" xml:space="preserve">
+    <value>Редактировать событие</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_NavigateToCalendarButton" xml:space="preserve">
+    <value>Перейти в Календарь</value>
+  </data>
+  <data name="YandexCalendar_Toolbar_RibbonToolbarButton" xml:space="preserve">
+    <value>Яндекс Календарь</value>
   </data>
 </root>

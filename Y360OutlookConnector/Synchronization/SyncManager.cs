@@ -1,4 +1,4 @@
-using CalDavSynchronizer.DataAccess;
+﻿using CalDavSynchronizer.DataAccess;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +10,7 @@ using log4net;
 using Y360OutlookConnector.Configuration;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Y360OutlookConnector.Clients;
+using System.Linq;
 
 namespace Y360OutlookConnector.Synchronization
 {
@@ -129,6 +130,7 @@ namespace Y360OutlookConnector.Synchronization
 
             _cachedSyncTargets = new List<SyncTargetInfo>(syncTargets);
             _syncTargetsTask = Task.FromResult(new List<SyncTargetInfo>(_cachedSyncTargets));
+
             _scheduler.ApplySettings(syncTargets, UserEmail, userCommonName);
         }
 
@@ -170,6 +172,17 @@ namespace Y360OutlookConnector.Synchronization
                     s_logger.Warn($"Failed to remove entities cache for profile {targetId}", exc);
                 }
             }
+        }
+
+        public SyncTargetConfig GetSyncTargetConfig(string outlookFolderId, SyncTargetType targetType = SyncTargetType.Calendar)
+        {
+            return _cachedSyncTargets?.FirstOrDefault(s => s.TargetType == targetType && 
+                                                      s.Config.Active && s.Config.OutlookFolderEntryId == outlookFolderId)?.Config;
+        }
+
+        public IWebDavClient CreateWebDavClient()
+        {
+            return _httpClientFactory.CreateWebDavClient(new CancellationTokenSource());
         }
 
         public Task<List<SyncTargetInfo>> GetSyncTargets()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -280,6 +280,19 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                         NullCardDavRepositoryLogger.Instance)));
         }
 
+        private static IInitialEntityMatcher<AppointmentId, DateTime, EventEntityMatchData, WebResourceName,
+                string, EventServerEntityMatchData>
+            CreateInitialEventEntityMatcher(IEqualityComparer<WebResourceName> equalityComparer)
+        {
+            return new InitialEventEntityMatcher(equalityComparer);
+        }
+
+        public static IMatchDataFactory<IICalendar, EventServerEntityMatchData>
+            CreateEventServerEntityMatchDataFactory()
+        {
+            return new EventServerEntityMatchDataFactory();
+        }
+
         private IOutlookSynchronizer CreateEventSynchronizer(Uri calendarUri,
             string outlookFolderEntryId, string outlookFolderStoreId, string outlookEmailAddress,
             string serverEmailAddress, string serverUserCommonName, bool isReadonly, string storageDataDirectory,
@@ -361,7 +374,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     eventSyncStateCreationStrategy,
                     entityRelationDataAccess,
                     outlookEventRelationDataFactory,
-                    Factories.CreateInitialEventEntityMatcher(bTypeIdEqualityComparer),
+                    CreateInitialEventEntityMatcher(bTypeIdEqualityComparer),
                     aTypeIdEqualityComparer,
                     bTypeIdEqualityComparer,
                     _totalProgressFactory,
@@ -370,7 +383,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     syncStateFactory,
                     _exceptionHandlingStrategy,
                     Factories.CreateEventEntityMatchDataFactory(),
-                    Factories.CreateEventServerEntityMatchDataFactory(),
+                    CreateEventServerEntityMatchDataFactory(),
                     EffectiveChunkSize,
                     CreateChunkedExecutor(EffectiveChunkSize),
                     FullEntitySynchronizationLoggerFactory

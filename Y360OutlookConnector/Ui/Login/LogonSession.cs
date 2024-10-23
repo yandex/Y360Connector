@@ -30,6 +30,9 @@ namespace Y360OutlookConnector.Ui.Login
 
         [JsonProperty("default_avatar_id")]
         public string DefaultAvatarId { get; set; }
+
+        [JsonProperty("id")]
+        public string UserId { get; set; }
     }
 
 

@@ -63,7 +63,26 @@
             </Button>
         </Grid>
         <Separator Margin="0,16" BorderBrush="#d9d9d9" BorderThickness="1" />
-        
+
+        <!-- General settings -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Grid.ColumnSpan="2" 
+                   Padding="0,4,8,6" FontWeight="Bold" 
+                   Content="{x:Static l10n:Strings.SettingsWindow_GeneralSettingsPanelTitle}" />
+            <CheckBox Grid.Row="1" Margin="0,8,0,8" x:Name="UseExternalBrowserForLoginCheckbox" 
+                      Checked="UseExternalBrowserForLoginCheckbox_Changed" Unchecked="UseExternalBrowserForLoginCheckbox_Changed"
+                      Content="{x:Static l10n:Strings.SettingsWindow_UseExternalBrowserForLogin}" />
+        </Grid>
+
+        <Separator Margin="0,18" BorderBrush="#d9d9d9" BorderThickness="1" />
         <!-- Log settings -->
         <Grid>
             <Grid.ColumnDefinitions>
@@ -71,14 +90,20 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+                <RowDefinition/>
                 <RowDefinition />
                 <RowDefinition />
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Grid.ColumnSpan="2" 
                    Padding="0,4,8,6" FontWeight="Bold" 
                    Content="{x:Static l10n:Strings.SettingsWindow_LogPanelTitle}" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static l10n:Strings.SettingsWindow_LogPanelDescription}" />
-            <StackPanel Grid.Row="1" Grid.Column="1" 
+            <CheckBox Grid.Row="1" Margin="0,8,0,8" x:Name="IncludeDebugLevelInfoCheckbox" 
+                      Checked="IncludeDebugLevelInfoCheckbox_Changed" Unchecked="IncludeDebugLevelInfoCheckbox_Changed"
+                      Content="{x:Static l10n:Strings.SettingsWindow_IncludeDebugLevelInfo}" />
+            
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static l10n:Strings.SettingsWindow_LogPanelDescription}" />
+            
+            <StackPanel Grid.Row="2" Grid.Column="1" 
                         Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Margin="10,0,0,0">
                     <Hyperlink Click="ShowLogsLink_OnClick">

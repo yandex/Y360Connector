@@ -121,20 +121,19 @@ namespace Y360OutlookConnector
 
         private static void InitLanguage(Outlook.Application application)
         {
+            var cultureName = "en-US";
+
             var languageSettings = application?.LanguageSettings;
             if (languageSettings != null)
             {
                 // https://learn.microsoft.com/en-us/office/vba/api/office.msolanguageid
                 var langId = languageSettings.get_LanguageID(Office.MsoAppLanguageID.msoLanguageIDUI);
-                string cultureName = "en-US";
                 if (langId == 1049)
                     cultureName = "ru-RU";
-
-                var cultureInfo = new System.Globalization.CultureInfo(cultureName);
-
-                // Устанавливаем UI язык для всех потоков в приложении
-                System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
             }
+                        
+            // Устанавливаем язык ресурсов приложения в один из поддерживаемых (или русский или английский)
+            Localization.Strings.Culture = new System.Globalization.CultureInfo(cultureName);
         }
 
         private static void InitTelemetry(Outlook.Application application)

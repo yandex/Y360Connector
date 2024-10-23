@@ -1,4 +1,4 @@
-using CalDavSynchronizer.Utilities;
+﻿using CalDavSynchronizer.Utilities;
 using log4net;
 using System;
 using System.Reflection;
@@ -16,6 +16,7 @@ namespace Y360OutlookConnector.Configuration
         private static Random s_random = new Random();
         private const int c_saltLength = 17;
 
+        public string UserId { get; set; }
         public string UserName { get; set; }
         public string Email { get; set; }
         public string RealName { get; set; }

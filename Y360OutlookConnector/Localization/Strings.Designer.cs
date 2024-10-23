@@ -369,6 +369,24 @@ namespace Y360OutlookConnector.Localization {
         /// <summary>
         ///   Ищет локализованную строку, похожую на .
         /// </summary>
+        public static string SettingsWindow_GeneralSettingsPanelTitle {
+            get {
+                return ResourceManager.GetString("SettingsWindow_GeneralSettingsPanelTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string SettingsWindow_IncludeDebugLevelInfo {
+            get {
+                return ResourceManager.GetString("SettingsWindow_IncludeDebugLevelInfo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
         public static string SettingsWindow_LogClearLink {
             get {
                 return ResourceManager.GetString("SettingsWindow_LogClearLink", resourceCulture);
@@ -525,6 +543,15 @@ namespace Y360OutlookConnector.Localization {
         public static string SettingsWindow_ProxyUserName {
             get {
                 return ResourceManager.GetString("SettingsWindow_ProxyUserName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string SettingsWindow_UseExternalBrowserForLogin {
+            get {
+                return ResourceManager.GetString("SettingsWindow_UseExternalBrowserForLogin", resourceCulture);
             }
         }
         
@@ -1092,6 +1119,33 @@ namespace Y360OutlookConnector.Localization {
         public static string Toolbar_SyncTargetsButton {
             get {
                 return ResourceManager.GetString("Toolbar_SyncTargetsButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string YandexCalendar_Toolbar_EditEventButton {
+            get {
+                return ResourceManager.GetString("YandexCalendar_Toolbar_EditEventButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string YandexCalendar_Toolbar_NavigateToCalendarButton {
+            get {
+                return ResourceManager.GetString("YandexCalendar_Toolbar_NavigateToCalendarButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string YandexCalendar_Toolbar_RibbonToolbarButton {
+            get {
+                return ResourceManager.GetString("YandexCalendar_Toolbar_RibbonToolbarButton", resourceCulture);
             }
         }
     }

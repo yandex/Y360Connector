@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Y360OutlookConnector.Clients;
+using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Ui.Login
 {
@@ -51,9 +52,16 @@ namespace Y360OutlookConnector.Ui.Login
             return ShowDialog();
         }
 
-        private void LoginWindow_Loaded(object sender, RoutedEventArgs args)
+        private async void LoginWindow_Loaded(object sender, RoutedEventArgs args)
         {
-            StartLogin();
+            if (ThisAddIn.Components.GeneralOptionsProvider.Options.IsExternalBrowserUsedInLogin)
+            {
+                await StartLoginInExternalBrowser();
+            }
+            else
+            {
+                StartLogin();
+            }            
         }
 
         private void LoginWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -110,6 +118,14 @@ namespace Y360OutlookConnector.Ui.Login
             passportPage.WebViewFailure += PassportPage_WebViewFailure;
 
             CurrentPage.Content = passportPage;
+        }
+
+        private async Task StartLoginInExternalBrowser()
+        {
+            ShowThrobber(true);
+            Telemetry.Signal(Telemetry.LoginWindowEvents, "external_auth", "user_configured");
+            _logonSession = new LogonSession(_httpClientFactory.CreateHttpClient());
+            await OpenInExternalBrowser(_logonSession.GetOAuthUrl());
         }
 
         private async void StartAlterLogin()

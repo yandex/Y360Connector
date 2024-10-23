@@ -10,6 +10,7 @@ using CalDavSynchronizer.Contracts;
 using CalDavSynchronizer.DataAccess;
 using CalDavSynchronizer.Utilities;
 using log4net;
+using log4net.Repository.Hierarchy;
 using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Clients
@@ -23,12 +24,24 @@ namespace Y360OutlookConnector.Clients
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
         private HttpClient _authorizedHttpClient;
+        private bool _wasDebugEnabledForAuthHttpClient;
         private SecureString _oauthToken;
 
         public HttpClientFactory(ProxyOptionsProvider proxyOptionsProvider)
         {
             _proxyOptionsProvider = proxyOptionsProvider;
             _proxyOptionsProvider.ProxyOptionsChanged += ProxyOptionsChanged;
+            ((Hierarchy)LogManager.GetRepository()).ConfigurationChanged += HttpClientFactory_LoggerConfigurationChanged;
+        }
+
+        private void HttpClientFactory_LoggerConfigurationChanged(object sender, EventArgs e)
+        {
+            if (_wasDebugEnabledForAuthHttpClient != s_logger.IsDebugEnabled)
+            {
+                // Поменялся уровень логгирования. Необходимо пересоздать auth http client, так как при его создании указывается обработчик
+                // или без логгирования или с логгированием
+                _authorizedHttpClient = null;
+            }
         }
 
         private void ProxyOptionsChanged(object sender, EventArgs e)
@@ -76,10 +89,11 @@ namespace Y360OutlookConnector.Clients
                 AllowAutoRedirect = false,
                 PreAuthenticate = false,
                 Proxy = proxy,
-                UseProxy = (proxy != null)
+                UseProxy = proxy != null
             };
 
-            var httpClient = s_logger.IsDebugEnabled
+            _wasDebugEnabledForAuthHttpClient = s_logger.IsDebugEnabled;
+            var httpClient = _wasDebugEnabledForAuthHttpClient
                 ? new HttpClient(new HttpClientLoggingHandler(httpClientHandler))
                 : new HttpClient(httpClientHandler);
 

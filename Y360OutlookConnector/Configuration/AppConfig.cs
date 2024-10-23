@@ -1,27 +1,30 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Y360OutlookConnector.Configuration
 {
     public static class AppConfig
     {
         private const string EnableAutoSyncValueName = "enableAutoSync";
-        public const bool EnableAutoSyncDefaultValue = true;
+        public static readonly bool EnableAutoSyncDefaultValue = true;
 
-        public static bool IsAutoSyncEnabled
+        private const string AlwaysEnableEditEventButtonValueName = "alwaysAllowEditEvent";
+        public static readonly bool AlwaysEnableEditEventButtonDefaultValue = false;
+
+        private static bool GetAppSettingValue(string settingName, bool defaultValue)
         {
-            get
+            var result = defaultValue;
+            var str = ConfigurationManager.AppSettings[settingName] ?? String.Empty;
+            if (!String.IsNullOrEmpty(str) && Boolean.TryParse(str, out var parsedValue))
             {
-                var result = EnableAutoSyncDefaultValue;
-                string str = ConfigurationManager.AppSettings[EnableAutoSyncValueName] ?? "";
-                if (!String.IsNullOrEmpty(str) && Boolean.TryParse(str, out var parsedValue))
-                    result = parsedValue;
-                return result;
+                result = parsedValue;
             }
+
+            return result;
         }
+
+        public static bool IsAutoSyncEnabled => GetAppSettingValue(EnableAutoSyncValueName, EnableAutoSyncDefaultValue);
+
+        public static bool IsAlwaysEnableEditEventButton => GetAppSettingValue(AlwaysEnableEditEventButtonValueName, AlwaysEnableEditEventButtonDefaultValue);
     }
 }
