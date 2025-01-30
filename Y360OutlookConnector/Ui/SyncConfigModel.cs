@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -13,7 +13,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector.Ui
 {
-    public class SyncTargetModel : INotifyPropertyChanged
+    public sealed class SyncTargetModel : INotifyPropertyChanged
     {
         private OutlookFolderDescriptor _outlookFolder;
         private bool _enabled;
@@ -81,7 +81,7 @@ namespace Y360OutlookConnector.Ui
             _enabled = Info.Config.Active;
         }
 
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        private void OnPropertyChanged([CallerMemberName] string name = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
@@ -99,6 +99,10 @@ namespace Y360OutlookConnector.Ui
                 default:
                     return "";
             }
+        }
+        public override string ToString()
+        {
+            return $"SyncConfigModel: Name={Name}, IsPrimary={IsPrimary}, IsReadOnly={IsReadOnly}, FolderExists={FolderExist}, TargetType={TargetTypeString}, Enabled={Enabled}, FolderName={FolderName}, FolderPath={FolderPath}";
         }
     }
 
@@ -174,21 +178,30 @@ namespace Y360OutlookConnector.Ui
         {
             foreach (var item in Items)
             {
-                OutlookFolderDescriptor folderDescriptor = null;
-                var folder = GetOutlookFolder(item.Info.Config);
-                if (folder != null && !AccountFolders.IsFolderTrashed(folder))
-                    folderDescriptor = new OutlookFolderDescriptor(folder);
+                try
+                {
+                    OutlookFolderDescriptor folderDescriptor = null;
+                    var folder = GetOutlookFolder(item.Info.Config);
+                    if (folder != null && !AccountFolders.IsFolderTrashed(folder))
+                        folderDescriptor = new OutlookFolderDescriptor(folder);
 
-                item.OutlookFolder = folderDescriptor;
+                    item.OutlookFolder = folderDescriptor;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Error when trying to find Outlook folder for {item}", ex);
+                }
+
                 if (item.OutlookFolder == null)
                 {
+                    s_logger.Info($"Outlook folder for {item} was not found. Sync target disabled.");
                     item.Info.Config.OutlookFolderEntryId = String.Empty;
                     item.Info.Config.OutlookFolderStoreId = String.Empty;
                     item.Info.Config.Active = false;
                     item.Enabled = false;
                 }
             }
-
+                        
             foreach (var item in Items)
             {
                 if (item.OutlookFolder == null && item.IsPrimary)

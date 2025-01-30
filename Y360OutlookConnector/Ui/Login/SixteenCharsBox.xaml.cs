@@ -10,38 +10,47 @@ using System.Windows.Input;
 namespace Y360OutlookConnector.Ui.Login
 {
     /// <summary>
-    /// Interaction logic for SevenDigitsBox.xaml
+    /// Interaction logic for SixteenCharsBox.xaml
     /// </summary>
-    public partial class SevenDigitsBox
+    public partial class SixteenCharsBox
     {
         public event EventHandler<TextEnteredArgs> TextEntered;
         public event EventHandler TextChanged;
 
-        private readonly TextBox[] _digitsBoxes;
+        private readonly TextBox[] _charsBoxes;
 
-        public SevenDigitsBox()
+        public SixteenCharsBox()
         {
             InitializeComponent();
 
-            _digitsBoxes = new[]
+            _charsBoxes = new[]
             {
-                DigitBox1,
-                DigitBox2,
-                DigitBox3,
-                DigitBox4,
-                DigitBox5,
-                DigitBox6,
-                DigitBox7,
+                CharBox1,
+                CharBox2,
+                CharBox3,
+                CharBox4,
+                CharBox5,
+                CharBox6,
+                CharBox7,
+                CharBox8,
+                CharBox9,
+                CharBox10,
+                CharBox11,
+                CharBox12,
+                CharBox13,
+                CharBox14,
+                CharBox15,
+                CharBox16
             };
 
-            Array.ForEach(_digitsBoxes, x => x.DataContext = new DigitBoxData());
+            Array.ForEach(_charsBoxes, x => x.DataContext = new CharBoxData());
         }
 
         public void SetAlarmed(bool value) 
         { 
-            foreach (var item in _digitsBoxes)
+            foreach (var item in _charsBoxes)
             {
-                if (item.DataContext is DigitBoxData data)
+                if (item.DataContext is CharBoxData data)
                     data.IsAlarmed = value;
             }
         }
@@ -49,36 +58,36 @@ namespace Y360OutlookConnector.Ui.Login
         private void SetCaretPos(int caretIndex)
         {
             if (caretIndex < 0) caretIndex = 0;
-            if (caretIndex > _digitsBoxes.Length) caretIndex = _digitsBoxes.Length;
+            if (caretIndex > _charsBoxes.Length) caretIndex = _charsBoxes.Length;
 
-            if (caretIndex < _digitsBoxes.Length)
+            if (caretIndex < _charsBoxes.Length)
             {
-                var numberBox = _digitsBoxes[caretIndex];
-                numberBox.Focus();
-                numberBox.SelectAll();
+                var charBox = _charsBoxes[caretIndex];
+                charBox.Focus();
+                charBox.SelectAll();
             }
             else
             {
-                var numberBox = _digitsBoxes[caretIndex - 1];
-                numberBox.Focus();
-                if (!String.IsNullOrEmpty(numberBox.Text))
+                var charBox = _charsBoxes[caretIndex - 1];
+                charBox.Focus();
+                if (!String.IsNullOrEmpty(charBox.Text))
                 {
-                    numberBox.CaretIndex = numberBox.Text.Length;
+                    charBox.CaretIndex = charBox.Text.Length;
                 }
                 else
                 {
-                    numberBox.SelectAll();
+                    charBox.SelectAll();
                 }
             }
         }
 
-        private int GetCaretPos(TextBox numberBox)
+        private int GetCaretPos(TextBox charBox)
         {
-            int index = Array.IndexOf(_digitsBoxes, numberBox);
-            if (index == _digitsBoxes.Length - 1)
+            int index = Array.IndexOf(_charsBoxes, charBox);
+            if (index == _charsBoxes.Length - 1)
             {
-                if (!String.IsNullOrEmpty(numberBox.Text) 
-                    && numberBox.SelectionLength == 0)
+                if (!String.IsNullOrEmpty(charBox.Text) 
+                    && charBox.SelectionLength == 0)
                     index += 1;
             }
             return index;
@@ -88,7 +97,7 @@ namespace Y360OutlookConnector.Ui.Login
         {
             var stringBuilder = new StringBuilder();
             str = "";
-            foreach (var item in _digitsBoxes)
+            foreach (var item in _charsBoxes)
             {
                 var text = item.Text.Trim();
                 if (String.IsNullOrEmpty(text))
@@ -99,7 +108,7 @@ namespace Y360OutlookConnector.Ui.Login
             return true;
         }
 
-        private void DigitBox_Paste(object sender, DataObjectPastingEventArgs e)
+        private void CharBox_Paste(object sender, DataObjectPastingEventArgs e)
         {
             var sourceDataObject = e.SourceDataObject;
             if (!sourceDataObject.GetDataPresent(DataFormats.UnicodeText, true)) return;
@@ -108,13 +117,13 @@ namespace Y360OutlookConnector.Ui.Login
             text = text?.Trim();
             if (String.IsNullOrEmpty(text)) return;
 
-            if (text.Length <= _digitsBoxes.Length && text.All(Char.IsDigit))
+            if (text.Length <= _charsBoxes.Length && text.All(Char.IsLetterOrDigit))
             {
-                int i = (text.Length == _digitsBoxes.Length) ? 0 : Array.IndexOf(_digitsBoxes, sender);
+                int i = (text.Length == _charsBoxes.Length) ? 0 : Array.IndexOf(_charsBoxes, sender);
                 int j = 0;
-                while (i < _digitsBoxes.Length && j < text.Length)
+                while (i < _charsBoxes.Length && j < text.Length)
                 {
-                    _digitsBoxes[i].Text = Char.ToString(text[j]);
+                    _charsBoxes[i].Text = Char.ToString(text[j]);
                     i += 1;
                     j += 1;
                 }
@@ -129,33 +138,33 @@ namespace Y360OutlookConnector.Ui.Login
             }
         }
 
-        private void DigitBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void CharBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (!(sender is TextBox numberBox)) return;
+            if (!(sender is TextBox charBox)) return;
 
             if (e.Key == Key.Left)
             {
-                SetCaretPos(GetCaretPos(numberBox) - 1);
+                SetCaretPos(GetCaretPos(charBox) - 1);
                 e.Handled = true;
             }
             else if (e.Key == Key.Right)
             {
-                SetCaretPos(GetCaretPos(numberBox) + 1);
+                SetCaretPos(GetCaretPos(charBox) + 1);
                 e.Handled = true;
             }
             else if (e.Key == Key.Back)
             {
-                if (!String.IsNullOrEmpty(numberBox.Text))
+                if (!String.IsNullOrEmpty(charBox.Text))
                 {
-                    numberBox.Text = String.Empty;
+                    charBox.Text = String.Empty;
                 }
                 else
                 {
-                    int index = Array.IndexOf(_digitsBoxes, numberBox);
+                    int index = Array.IndexOf(_charsBoxes, charBox);
                     if (index > 0)
                     {
-                        _digitsBoxes[index - 1].Text = String.Empty;
-                        _digitsBoxes[index - 1].Focus();
+                        _charsBoxes[index - 1].Text = String.Empty;
+                        _charsBoxes[index - 1].Focus();
                     }
                 }
                 e.Handled = true;
@@ -169,14 +178,14 @@ namespace Y360OutlookConnector.Ui.Login
             }
         }
 
-        private void DigitBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void CharBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             if (!(sender is TextBox textBox)) return;
 
             var caretPos = GetCaretPos(textBox);
-            if (caretPos >= _digitsBoxes.Length) return;
+            if (caretPos >= _charsBoxes.Length) return;
 
-            if (e.Text.Length == 1 && Char.IsDigit(e.Text[0]))
+            if (e.Text.Length == 1 && Char.IsLetterOrDigit(e.Text[0]))
             {
                 textBox.Text = e.Text;
                 textBox.SelectAll();
@@ -192,17 +201,19 @@ namespace Y360OutlookConnector.Ui.Login
             }
         }
 
-        private void DigitBox_PreviewMouseDown(object sender, RoutedEventArgs e)
+        private void CharBox_PreviewMouseDown(object sender, RoutedEventArgs e)
         {
-            var textBox = (sender as TextBox);
-            if (textBox == null) return;
+            if (!(sender is TextBox textBox))
+            {
+                return;
+            }
 
             textBox.SelectAll();
             textBox.Focus();
             e.Handled = true;
         }
 
-        public class DigitBoxData : INotifyPropertyChanged
+        public class CharBoxData : INotifyPropertyChanged
         {
             private bool _isAlarmed = false;
             public bool IsAlarmed { 

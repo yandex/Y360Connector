@@ -1,6 +1,4 @@
-﻿using Y360OutlookConnector.Clients.Telemost.Model;
-
-namespace Y360OutlookConnector.Ui.Extensions
+﻿namespace Y360OutlookConnector.Ui.Extensions
 {
     public class TelemostMeetingInfo
     {

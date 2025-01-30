@@ -16,20 +16,38 @@ namespace Y360OutlookConnector.Utilities
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
         public static readonly string ParticipantsPermissionPropertyName = "X-YANDEX-PARTICIPANT-PERMISSION";
-        public static bool CanParticipantsEditEvent(this IICalendar calendar)
+        public static readonly string SkipInvitationEmailsPropertyName = "X-YANDEX-SKIP-INVITATION-EMAILS";
+
+        public static bool IsNew(this IICalendar iCalendar)
         {
-            var propCanEdit = calendar.Properties.FirstOrDefault(p => p.Name == ParticipantsPermissionPropertyName);
+            return String.IsNullOrEmpty(iCalendar.Method);
+        }
+
+        public static void AddSkipInvitationProperty(this iCalendar calendar)
+        {
+            calendar.AddProperty(SkipInvitationEmailsPropertyName, "true");
+        }
+        
+        public static bool CanParticipantsEditEvent(this IEvent anEvent)
+        {
+            var propCanEdit = anEvent.Properties.FirstOrDefault(p => p.Name == ParticipantsPermissionPropertyName);
             if (propCanEdit == null)
             {
                 return false;
             }
             var propValue = propCanEdit.Value as string;
-            if (propValue == null || propValue != "EDIT")
+            return propValue != null && propValue == "EDIT";
+        }
+
+        public static bool CanParticipantsEditEvent(this IICalendar calendar)
+        {
+            var events = calendar.Events;
+            if (events == null || events.Count == 0)
             {
                 return false;
             }
 
-            return true;
+            return events[0].CanParticipantsEditEvent();
         }
 
         public static Uri GetMasterEventUrl(this IICalendar calendar)

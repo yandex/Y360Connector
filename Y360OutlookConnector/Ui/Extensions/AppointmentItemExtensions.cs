@@ -11,11 +11,15 @@ using Y360OutlookConnector.Clients.Telemost.Model;
 
 namespace Y360OutlookConnector.Ui.Extensions
 {
-    internal static class AppointmentItemExtensions
+    public static class AppointmentItemExtensions
     {
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
         private static readonly Regex EmptyText = new Regex(@"^\s*$", RegexOptions.Compiled);
+
+        private static readonly Regex StartWithSpacesAndNewLineText = new Regex(@"^[ \t]*(\n|\r|\r\n)", RegexOptions.Compiled);
+
+        private static readonly Regex EndWithNewLineText = new Regex(@"(\n|\r|\r\n)$", RegexOptions.Compiled);
 
         private const string TelemostMeetingSettingsPropertyName = "TelemostMeetingSettings";
 
@@ -27,6 +31,7 @@ namespace Y360OutlookConnector.Ui.Extensions
             {
                 return;
             }
+
             appointment.Body = body;
         }
 
@@ -262,30 +267,35 @@ namespace Y360OutlookConnector.Ui.Extensions
                             textAfter = currentBody.Substring(pos + linkText.Length);
                         }
                     }
+                    
+                    currentAppointment.SetBody(newText.InsertText(textBefore, textAfter));
+                }
 
-                    var newBody = new StringBuilder(textBefore);
-
-                    if (textBefore.Length > 0 && !textBefore.EndsWith(Environment.NewLine))
-                    {
-                        newBody.AppendLine();
-                    }
-                    newBody.Append(newText);
-
-                    if (textAfter.Length > 0 && !textAfter.StartsWith(Environment.NewLine))
-                    {
-                        newBody.AppendLine();
-                    }
-                    newBody.Append(textAfter);
-
-                    currentAppointment.SetBody(newBody.ToString());
-
-                    // Применяем сохранение, только если встреча или собрание уже сохранены в outlook
-                    if (!string.IsNullOrEmpty(currentAppointment.EntryID))
-                    {
-                        currentAppointment.Save();
-                    }                    
+                // Применяем сохранение, только если встреча или собрание уже сохранены в outlook
+                if (!string.IsNullOrEmpty(currentAppointment.EntryID))
+                {
+                    currentAppointment.Save();
                 }
             }
+        }
+
+        public static string InsertText(this string newText, string textBefore, string textAfter)
+        {
+            var newBody = new StringBuilder(textBefore);
+
+            if (textBefore.Length > 0 && !EndWithNewLineText.IsMatch(textBefore))
+            {
+                newBody.AppendLine();
+            }
+            newBody.Append(newText);
+
+            if (textAfter.Length > 0 && !StartWithSpacesAndNewLineText.IsMatch(textAfter))
+            {
+                newBody.AppendLine();
+            }
+            newBody.Append(textAfter);
+
+            return newBody.ToString();
         }
 
         private static async Task CreateMeetingAsync(this AppointmentItem currentAppointment, bool isMeetingInternal)

@@ -11,6 +11,12 @@ namespace Y360OutlookConnector.Configuration
         private const string AlwaysEnableEditEventButtonValueName = "alwaysAllowEditEvent";
         public static readonly bool AlwaysEnableEditEventButtonDefaultValue = false;
 
+        private const string AlwaysSkipInvitationEmailsValueName = "alwaysSkipInvitationEmails";
+        public static readonly bool AlwaysSkipInvitationEmailsDefaultValue = true;
+
+        private const string StrongCodeConfirmationUsedValueName = "useStringCodeConfirmation";
+
+        public static readonly bool StrongCodeConfirmationUsedDefaultValue = true;
         private static bool GetAppSettingValue(string settingName, bool defaultValue)
         {
             var result = defaultValue;
@@ -26,5 +32,9 @@ namespace Y360OutlookConnector.Configuration
         public static bool IsAutoSyncEnabled => GetAppSettingValue(EnableAutoSyncValueName, EnableAutoSyncDefaultValue);
 
         public static bool IsAlwaysEnableEditEventButton => GetAppSettingValue(AlwaysEnableEditEventButtonValueName, AlwaysEnableEditEventButtonDefaultValue);
+
+        public static bool IsAlwaysSkipInvitationEmails => GetAppSettingValue(AlwaysSkipInvitationEmailsValueName, AlwaysSkipInvitationEmailsDefaultValue);
+
+        public static bool IsStrongCodeConfirmationUsed => GetAppSettingValue(StrongCodeConfirmationUsedValueName, StrongCodeConfirmationUsedDefaultValue);
     }
 }

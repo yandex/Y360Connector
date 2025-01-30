@@ -1,4 +1,4 @@
-namespace Y360OutlookConnector.Ui
+﻿namespace Y360OutlookConnector.Ui
 {
     partial class Y360ConnectorRibbon : Microsoft.Office.Tools.Ribbon.RibbonBase
     {
@@ -38,6 +38,7 @@ namespace Y360OutlookConnector.Ui
             this.MainGroup = this.Factory.CreateRibbonGroup();
             this.LoginButton = this.Factory.CreateRibbonButton();
             this.SyncNowButton = this.Factory.CreateRibbonButton();
+            this.SyncAllNowButton = this.Factory.CreateRibbonButton();
             this.ToolsAndLayersButton = this.Factory.CreateRibbonButton();
             this.SettingsButton = this.Factory.CreateRibbonButton();
             this.AboutButton = this.Factory.CreateRibbonButton();
@@ -57,6 +58,7 @@ namespace Y360OutlookConnector.Ui
             // 
             this.MainGroup.Items.Add(this.LoginButton);
             this.MainGroup.Items.Add(this.SyncNowButton);
+            this.MainGroup.Items.Add(this.SyncAllNowButton);
             this.MainGroup.Items.Add(this.ToolsAndLayersButton);
             this.MainGroup.Items.Add(this.SettingsButton);
             this.MainGroup.Items.Add(this.AboutButton);
@@ -81,6 +83,15 @@ namespace Y360OutlookConnector.Ui
             this.SyncNowButton.Name = "SyncNowButton";
             this.SyncNowButton.ShowImage = true;
             this.SyncNowButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SyncNowButton_Click);
+            // 
+            // SyncAllNowButton
+            // 
+            this.SyncAllNowButton.Image = global::Y360OutlookConnector.Properties.Resources.SyncNow;
+            this.SyncAllNowButton.KeyTip = "SA";
+            this.SyncAllNowButton.Label = "Synchronize all";
+            this.SyncAllNowButton.Name = "SyncAllNowButton";
+            this.SyncAllNowButton.ShowImage = true;
+            this.SyncAllNowButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SyncAllNowButton_Click);
             // 
             // ToolsAndLayersButton
             // 
@@ -142,6 +153,7 @@ namespace Y360OutlookConnector.Ui
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SettingsButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton AboutButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton HelpButton;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton SyncAllNowButton;
     }
 }
 

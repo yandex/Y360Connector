@@ -30,10 +30,9 @@ namespace Y360OutlookConnector
 
         private readonly SyncManager _syncManager;
         private readonly HttpClientFactory _httpClientFactory;
-        private readonly IncomingInvitesMonitor _invitesMonitor;
-
+       
         public SyncManager SyncManager => _syncManager;
-        public ComponentContainer(Outlook.Application application)
+        public ComponentContainer(Outlook.Application application, InvitesInfoStorage invitesInfo)
         {
             // Минимальная версия TLS 1.2, так как устаревшие версии протокола могут быть заблокированы в сети пользователя
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -59,13 +58,9 @@ namespace Y360OutlookConnector
 
             TelemostClient = new TelemostClient(_httpClientFactory);
 
-            var invitesInfo = new InvitesInfoStorage(profileDataFolderPath);
-            _invitesMonitor = new IncomingInvitesMonitor(application, invitesInfo);
-
             _syncManager = new SyncManager(OutlookApplication, _httpClientFactory,
                 LoginController, ProxyOptionsProvider, profileDataFolderPath, invitesInfo);
 
-            _invitesMonitor.Start();
             _syncManager.Launch();
         }
 
@@ -139,15 +134,9 @@ namespace Y360OutlookConnector
             var accessToken = LoginController.IsUserLoggedIn ? LoginController.UserInfo.AccessToken : null;
             _httpClientFactory.SetAccessToken(accessToken);
         }
-
-        public async void SynchronizeNowAsync()
-        {
-            await _syncManager.SynchronizeNowAsync();
-        }
-
+        
         public void Dispose()
         {
-            _invitesMonitor.Dispose();
             _syncManager.Dispose();
             AutoUpdateManager.Dispose();
             PaneController.Dispose();

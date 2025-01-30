@@ -1,0 +1,62 @@
+BEGIN:VCALENDAR
+PRODID:-//Microsoft Corporation//Outlook 16.0 MIMEDIR//EN
+VERSION:2.0
+METHOD:CANCEL
+X-MS-OLK-FORCEINSPECTOROPEN:TRUE
+BEGIN:VTIMEZONE
+TZID:Europe/Moscow
+BEGIN:STANDARD
+DTSTART:16010101T000000
+TZOFFSETFROM:+0300
+TZOFFSETTO:+0300
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+ATTENDEE;CN="test08@компанияикс.рф";RSVP=FALSE:mailto:test08@компанияик
+	с.рф
+CLASS:PUBLIC
+CREATED:20241011T125054Z
+DESCRIPTION:\ntest07 отменил событие «test»	\nОсвобо
+	дившееся время: сегодня\, 11-го октября\, с 
+	17:00 до 17:30 (Europe/Moscow\, GMT+03:00)	\n\n  _____  \n\nУведом
+	ление отправлено через Яндекс.Календарь
+	 <https://calendar.yandex.ru?uid=1130000067596906> . Если вы не х
+	отите получать такие письма\, откажитесь
+	 от них <https://yandex.ru/support/calendar/event-notification.html#t
+	urn-off-notifications> .  © 2007—2024 «Яндекс <https://ya.ru> »
+	\n
+DTEND;TZID=Europe/Moscow:20241011T173000
+DTSTAMP:20241011T125049Z
+DTSTART;TZID=Europe/Moscow:20241011T170000
+LAST-MODIFIED:20241011T125107Z
+LOCATION:test
+ORGANIZER;CN=test07:mailto:info@calendar.yandex.ru
+PRIORITY:5
+SEQUENCE:0
+SUMMARY:test
+TRANSP:OPAQUE
+UID:040000008200E00074C5B7101A82E00800000000E052F453F51BDB01000000000000000
+	010000000720FB7490D3F664A95367A403FBD65A4
+X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body link="#1952ce" alink=
+	"red" style="line-height: 1.4"><table cellpadding="4" width="100%"><tr><td
+	 bgcolor="f6e9e4"><table cellspacing="0" cellpadding="5"><tr><td style="pa
+	dding: 0 7px 1px"><font size="4" face="Arial\,sans-serif"><b>test07 отм
+	енил событие «test»</b></font></td></tr></table></td></tr><tr
+	><td><font face="Arial\,sans-serif" size="3">Освободившееся 
+	время: сегодня\, 11-го октября\, с 17:00 до 17:30
+	 (Europe/Moscow\, GMT+03:00)</font></td></tr></table><table cellpadding="4
+	" width="100%"><tr><td><hr size="1" noshade="noshade" color="#cccccc" styl
+	e="border: 0 hidden\; border-top: 1px solid #cccccc\; height: 0\; margin-t
+	op: 30px\;" /><font size="1" face="Verdana\, sans-serif" color="#9a9a9a">
+	Уведомление отправлено через <a style="color: #
+	9a9a9a" href="https://calendar.yandex.ru?uid=1130000067596906">Яндек
+	с.Календарь</a>. Если вы не хотите получат
+	ь такие письма\, <a style="color: #9a9a9a" href="https://yand
+	ex.ru/support/calendar/event-notification.html#turn-off-notifications">о
+	ткажитесь от них</a>.  © 2007—2024 «<a style="color:
+	 #9a9a9a" href="https://ya.ru">Яндекс</a>»</font></td></tr></table>
+	</body></html>
+X-MICROSOFT-CDO-BUSYSTATUS:BUSY
+X-MICROSOFT-CDO-IMPORTANCE:1
+END:VEVENT
+END:VCALENDAR

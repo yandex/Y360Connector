@@ -1,7 +1,6 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.2092
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.34601.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Y360OutlookConnector", "Y360OutlookConnector\Y360OutlookConnector.csproj", "{128B5DE2-B859-4E50-AF25-485AFD12E0A5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -28,6 +27,8 @@ Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "Y360OutlookConnector.Setup"
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Y360OutlookConnector.Setup.CA", "Y360OutlookConnector.Setup.CA\Y360OutlookConnector.Setup.CA.vcxproj", "{2919D588-EF39-4203-9288-92D57D8BC6CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Y360OutlookConnectorUnitTests", "Y360OutlookConnectorUnitTests\Y360OutlookConnectorUnitTests.csproj", "{5289DE8C-298A-4C3D-91B1-30ED6006170E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,6 +90,14 @@ Global
 		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|Any CPU.ActiveCfg = Release|Win32
 		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|x86.ActiveCfg = Release|Win32
 		{2919D588-EF39-4203-9288-92D57D8BC6CD}.Release|x86.Build.0 = Release|Win32
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Debug|x86.Build.0 = Debug|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Release|x86.ActiveCfg = Release|Any CPU
+		{5289DE8C-298A-4C3D-91B1-30ED6006170E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

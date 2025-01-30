@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Windows;
 using log4net;
 using Microsoft.Office.Tools.Ribbon;
 using Y360OutlookConnector.Synchronization;
@@ -14,6 +15,7 @@ namespace Y360OutlookConnector.Ui
         private void Y360ConnectorRibbon_Load(object sender, RibbonUIEventArgs e)
         {
             SyncNowButton.Visible = false;
+            SyncAllNowButton.Visible = false;
             ToolsAndLayersButton.Visible = false;
             LoginButton.Visible = true;
 
@@ -35,6 +37,7 @@ namespace Y360OutlookConnector.Ui
             LoginButton.Label = Localization.Strings.Toolbar_LoginButton;
             MainGroup.Label = Localization.Strings.Toolbar_RibbonGroup;
             SyncNowButton.Label = Localization.Strings.Toolbar_SyncNowButton;
+            SyncAllNowButton.Label = Localization.Strings.Toolbar_SyncAllNowButton;
             ToolsAndLayersButton.Label = Localization.Strings.Toolbar_SyncTargetsButton;
             SettingsButton.Label = Localization.Strings.Toolbar_SettingsButton;
             AboutButton.Label = Localization.Strings.Toolbar_AboutButton;
@@ -76,12 +79,16 @@ namespace Y360OutlookConnector.Ui
             if (e.State == SyncState.Running)
             {
                 SyncNowButton.Enabled = false;
+                SyncAllNowButton.Enabled = false;
                 SyncNowButton.Label = Localization.Strings.Toolbar_SyncNowButtonRunning;
+                SyncAllNowButton.Label = Localization.Strings.Toolbar_SyncNowButtonRunning;
             }
             else
             {
                 SyncNowButton.Enabled = true;
+                SyncAllNowButton.Enabled = true;
                 SyncNowButton.Label = Localization.Strings.Toolbar_SyncNowButton;
+                SyncAllNowButton.Label = Localization.Strings.Toolbar_SyncAllNowButton;
             }
 
             bool hasErrors = syncStatus.CriticalError != CriticalError.None;
@@ -98,6 +105,7 @@ namespace Y360OutlookConnector.Ui
         private void SetUserLoggedIn(bool isUserLoggedIn)
         {
             SyncNowButton.Visible = isUserLoggedIn;
+            SyncAllNowButton.Visible = isUserLoggedIn;
             ToolsAndLayersButton.Visible = isUserLoggedIn;
             LoginButton.Visible = !isUserLoggedIn;
         }
@@ -115,12 +123,51 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
+        private void SyncAllNowButton_Click(object sender, RibbonControlEventArgs e)
+        {
+            var syncManager = ThisAddIn.Components?.SyncManager;
+
+            if (syncManager == null)
+            {
+                return;
+            }
+
+            // Запрещаем синхронизацию по таймеру, пока пользователь не закроет диалоговое окно
+            syncManager.AutoSyncDisabled = true;
+            var result = MessageBox.Show(Localization.Strings.Messages_SyncAllMessageDescription,
+                            Localization.Strings.Messages_SyncAllMessageTitle,
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+            syncManager.AutoSyncDisabled = false;
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+            try
+            {
+                Telemetry.Signal(Telemetry.ToolbarEvents, "sync_all_now_button");
+                _ = syncManager.RunSynchronization(true, true);
+            }
+            catch (Exception exc)
+            {
+                ExceptionHandler.Instance.Unexpected(exc);
+            }
+        }
+
         private void SyncNowButton_Click(object sender, RibbonControlEventArgs e)
         {
+            var syncManager = ThisAddIn.Components?.SyncManager;
+
+            if (syncManager == null)
+            {
+                return;
+            }
+
             try
             {
                 Telemetry.Signal(Telemetry.ToolbarEvents, "sync_now_button");
-                ThisAddIn.Components?.SynchronizeNowAsync();
+                _ = syncManager.RunSynchronization(true, false);
             }
             catch (Exception exc)
             {

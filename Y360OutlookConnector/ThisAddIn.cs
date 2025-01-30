@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Y360OutlookConnector.Configuration;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Office = Microsoft.Office.Core;
+using Y360OutlookConnector.Synchronization;
 
 namespace Y360OutlookConnector
 {
@@ -23,8 +24,19 @@ namespace Y360OutlookConnector
 
         private System.Windows.Forms.Timer _startupTimer;
 
+        private IncomingInvitesMonitor _invitesMonitor;
+        private InvitesInfoStorage _invitesInfo;
+
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
+            // Необходимо включить отслеживание получения приглашений при старте плагина, так как в противном
+            // можем пропустить некоторые извещения
+            var profileDataFolderPath = DataFolder.GetPathForProfile(Application.Session.CurrentProfileName);
+
+             _invitesInfo = new InvitesInfoStorage(profileDataFolderPath);
+            _invitesMonitor = new IncomingInvitesMonitor(Application, _invitesInfo);
+            _invitesMonitor.Start();
+
             try
             {
                 InitUiThreadContext();
@@ -46,6 +58,8 @@ namespace Y360OutlookConnector
 
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {
+            _invitesMonitor?.Dispose();
+            _invitesMonitor = null;
             Components?.Dispose();
             Components = null;
         }
@@ -63,7 +77,7 @@ namespace Y360OutlookConnector
                 _startupTimer = null;
 
                 RestoreUiContext();
-                Components = new ComponentContainer(Application);
+                Components = new ComponentContainer(Application, _invitesInfo);
                 ComponentsCreated?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception exc)

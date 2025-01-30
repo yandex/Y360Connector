@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using GenSync.Logging;
 using log4net;
 using Microsoft.Office.Interop.Outlook;
 using Microsoft.Office.Tools.Ribbon;
@@ -130,13 +131,8 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
-        private bool IsUserOrganizer()
+        private bool IsUserOrganizer(string outlookEmail)
         {
-            if (!_loginController.IsUserLoggedIn)
-            {
-                return false;
-            }
-
             var currentAppointment = CurrentAppointment;
 
             if (currentAppointment == null)
@@ -144,15 +140,9 @@ namespace Y360OutlookConnector.Ui
                 return false;
             }
 
-            var organizer = currentAppointment.GetOrganizer();
+            var organizerEmail = currentAppointment.GetOrganizerEmailAddress(NullEntitySynchronizationLogger.Instance);
 
-            if (organizer == null)
-            {
-                return false;
-            }
-
-            var organizerEmail = organizer.Address;
-            if (EmailAddress.AreSame(organizerEmail, _loginController.UserInfo.Email, EmailAddress.KnownDomainsAliases))
+            if (EmailAddress.AreSame(organizerEmail, outlookEmail, EmailAddress.KnownDomainsAliases))
             {
                 return true;
             }
@@ -191,6 +181,12 @@ namespace Y360OutlookConnector.Ui
                 return null;
             }
 
+            var outlookEmail = syncFolder.GetAccount();
+            if (String.IsNullOrEmpty(outlookEmail))
+            {
+                s_logger.Info($"Fail to get account for folder={syncFolder.Name}");
+                return null;
+            }
             var recState = currentAppointment.GetRecurrenceState();
 
             var isException = recState == OlRecurrenceState.olApptException;
@@ -242,7 +238,7 @@ namespace Y360OutlookConnector.Ui
                 return null;
             }
 
-            var isUserOrganizer = IsUserOrganizer();
+            var isUserOrganizer = IsUserOrganizer(outlookEmail);
             if (!isUserOrganizer)
             {
                 if (!AppConfig.IsAlwaysEnableEditEventButton)

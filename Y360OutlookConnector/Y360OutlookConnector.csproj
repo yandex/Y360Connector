@@ -286,6 +286,15 @@
     <Compile Include="Ui\Converters\BooleanToTextConverter.cs" />
     <Compile Include="Ui\Converters\BooleanToVisibilityExConverter.cs" />
     <Compile Include="Ui\Extensions\BitmapExtensions.cs" />
+    <Compile Include="Ui\Login\CodeEnteredArgs.cs" />
+    <Compile Include="Ui\Login\ConfirmationStrongCodePage.xaml.cs">
+      <DependentUpon>ConfirmationStrongCodePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Ui\Login\IConfirmationCodePage.cs" />
+    <Compile Include="Ui\Login\TextEnteredArgs.cs" />
+    <Compile Include="Ui\Login\SixteenCharsBox.xaml.cs">
+      <DependentUpon>SixteenCharsBox.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Utilities\CalendarUtils.cs" />
     <Compile Include="Utilities\LoggingUtils.cs" />
     <Compile Include="Utilities\SyncTargetConfigExtensions.cs" />
@@ -372,14 +381,11 @@
     <EmbeddedResource Include="Localization\Strings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Localization\Strings.ru-RU.resx">
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="Localization\Strings.en-US.resx">
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
+    <EmbeddedResource Include="Localization\Strings.en-US.resx" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -469,6 +475,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Ui\Login\ConfirmationStrongCodePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Ui\Login\ConfirmationCodePage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -484,6 +494,10 @@
     <Page Include="Ui\Login\PassportPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Ui\Login\SixteenCharsBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Ui\Login\SevenDigitsBox.xaml">
       <SubType>Designer</SubType>
@@ -563,9 +577,9 @@
     <Resource Include="Resources\Logo-Yandex-360.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\Calendar.png" />
-    <Content Include="Resources\Edit.png" />
-    <Content Include="Resources\YandexCalendar.png" />
+    <Resource Include="Resources\Calendar.png" />
+    <Resource Include="Resources\Edit.png" />
+    <Resource Include="Resources\YandexCalendar.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

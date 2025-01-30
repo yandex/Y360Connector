@@ -288,6 +288,24 @@ namespace Y360OutlookConnector.Localization {
         /// <summary>
         ///   Ищет локализованную строку, похожую на .
         /// </summary>
+        public static string Messages_SyncAllMessageDescription {
+            get {
+                return ResourceManager.GetString("Messages_SyncAllMessageDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string Messages_SyncAllMessageTitle {
+            get {
+                return ResourceManager.GetString("Messages_SyncAllMessageTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
         public static string Messages_SyncFailureMessageDescription {
             get {
                 return ResourceManager.GetString("Messages_SyncFailureMessageDescription", resourceCulture);
@@ -1092,6 +1110,15 @@ namespace Y360OutlookConnector.Localization {
         public static string Toolbar_SettingsButton {
             get {
                 return ResourceManager.GetString("Toolbar_SettingsButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .
+        /// </summary>
+        public static string Toolbar_SyncAllNowButton {
+            get {
+                return ResourceManager.GetString("Toolbar_SyncAllNowButton", resourceCulture);
             }
         }
         

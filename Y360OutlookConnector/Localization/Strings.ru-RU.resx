@@ -192,6 +192,12 @@
   <data name="Messages_ProxyErrorMessageTitle" xml:space="preserve">
     <value>Синхронизация не работает</value>
   </data>
+  <data name="Messages_SyncAllMessageDescription" xml:space="preserve">
+    <value>Эта операция может занять много времени. Вы уверены, что хотите продолжить?</value>
+  </data>
+  <data name="Messages_SyncAllMessageTitle" xml:space="preserve">
+    <value>Синхронизация событий без ограничений</value>
+  </data>
   <data name="Messages_SyncFailureMessageDescription" xml:space="preserve">
     <value>Скорее всего, ошибка на сервере, и её уже исправляют. Когда всё наладится, обмен данными возобновится автоматически.</value>
   </data>
@@ -467,6 +473,9 @@
   </data>
   <data name="Toolbar_SettingsButton" xml:space="preserve">
     <value>Настройки</value>
+  </data>
+  <data name="Toolbar_SyncAllNowButton" xml:space="preserve">
+    <value>Синхронизировать всё</value>
   </data>
   <data name="Toolbar_SyncNowButton" xml:space="preserve">
     <value>Синхронизировать</value>

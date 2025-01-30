@@ -37,6 +37,11 @@ namespace Y360OutlookConnector.Synchronization
         public string UserEmail { get; private set; }
         public SyncStatus Status { get; set; }
 
+        /// <summary>
+        /// Запрет или разрешение на выполнение синхронизации по таймеру
+        /// </summary>
+        public bool AutoSyncDisabled { get; set; }
+
         public SyncManager(Outlook.Application application, IHttpClientFactory httpClientFactory,
             LoginController loginController, ProxyOptionsProvider proxyOptionsProvider, string dataFolderPath,
             InvitesInfoStorage invitesInfo)
@@ -87,7 +92,7 @@ namespace Y360OutlookConnector.Synchronization
         private async Task OnAutoSync()
         {
             _timer.Stop();
-            if (Status.State != SyncState.Running)
+            if (Status.State != SyncState.Running && !AutoSyncDisabled)
             {
                 await RunSynchronization();
             }
@@ -190,12 +195,7 @@ namespace Y360OutlookConnector.Synchronization
             return _syncTargetsTask;
         }
 
-        public async Task SynchronizeNowAsync()
-        {
-            await RunSynchronization(true);
-        }
-
-        public async Task RunSynchronization(bool manuallyTriggered = false)
+        public async Task RunSynchronization(bool manuallyTriggered = false, bool noDateConstraint = false)
         {
             bool isBlankShot = false;
             try
@@ -204,7 +204,7 @@ namespace Y360OutlookConnector.Synchronization
 
                 ThisAddIn.RestoreUiContext();
                 await UpdateSyncTargetsAsync(manuallyTriggered);
-                isBlankShot = await _scheduler.RunSynchronization(manuallyTriggered, _ctags) == false;
+                isBlankShot = await _scheduler.RunSynchronization(manuallyTriggered, noDateConstraint, _ctags) == false;
             }
             catch (Exception exc)
             {

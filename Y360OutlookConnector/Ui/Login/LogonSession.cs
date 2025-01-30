@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Ui.Login
 {
@@ -54,25 +56,49 @@ namespace Y360OutlookConnector.Ui.Login
             _tld = GetTopLevelDomain(Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName);
         }
 
+        private static Uri CreateUri(string uri, Dictionary<string,string> parameters)
+        {
+            var urlBuilder = new UriBuilder(uri);
+
+            var extraQueryString = string.Join("&", parameters.Select(p => $"{WebUtility.UrlEncode(p.Key)}={WebUtility.UrlEncode(p.Value)}"));
+
+            urlBuilder.Query = extraQueryString;
+
+            return urlBuilder.Uri;
+        }
+
         public Uri GetOAuthUrl()
         {
             var codeChallenge = CalcCodeChallenge(_codeVerifier);
-            var oauthUrl = $"https://oauth.yandex.{_tld}/authorize" +
-                           $"?response_type=code" +
-                           $"&origin={OriginAppId}" +
-                           $"&client_id={ClientId}" +
-                           $"&code_challenge={codeChallenge}" +
-                           $"&code_challenge_method=S256";
-            return new Uri(oauthUrl);
+
+            var extraParameters = new Dictionary<string, string>
+            {
+                ["response_type"] = "code",
+                ["origin"] = $"{OriginAppId}",
+                ["client_id"] = $"{ClientId}",
+                ["code_challenge"] = $"{codeChallenge}",
+                ["code_challenge_method"] = "S256"
+            };
+
+            if (AppConfig.IsStrongCodeConfirmationUsed)
+            {
+                extraParameters["use_strong_code"] = "1";
+            }
+
+            return CreateUri($"https://oauth.yandex.{_tld}/authorize", extraParameters);
         }
 
         public Uri GetPassportUrl()
         {
             var oauthUrl = GetOAuthUrl();
-            var passportUrl = $"https://passport.yandex.{_tld}/auth" +
-                              $"?origin={OriginAppId}" +
-                              $"&retpath=" + WebUtility.UrlEncode(oauthUrl.ToString());
-            return new Uri(passportUrl);
+           
+            var extraParameters = new Dictionary<string, string>
+            {
+                ["origin"] = $"{OriginAppId}",
+                ["retpath"] = $"{oauthUrl}"
+            };
+
+            return CreateUri($"https://passport.yandex.{_tld}/auth", extraParameters);
         }
 
         public async Task<string> RequestTokenAsync(string code)

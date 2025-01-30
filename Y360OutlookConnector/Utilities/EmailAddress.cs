@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using log4net;
 
 namespace Y360OutlookConnector.Utilities
 {
     public class EmailAddress
     {
+        private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
         public string NameId { get; set; } = String.Empty;
 
         public string Domain { get; set; } = String.Empty;
@@ -80,15 +84,23 @@ namespace Y360OutlookConnector.Utilities
 
         public static bool AreSame(Uri uri1, Uri uri2, IEnumerable<string> domainAliases = null)
         {
-            if (uri1 == null || uri2 == null)
-                return false;
+            try
+            {
+                if (uri1 == null || uri2 == null)
+                    return false;
 
-            if (uri1.Scheme != Uri.UriSchemeMailto || uri2.Scheme != Uri.UriSchemeMailto)
-                return false;
+                if (uri1.Scheme != Uri.UriSchemeMailto || uri2.Scheme != Uri.UriSchemeMailto)
+                    return false;
 
-            int prefixLength = Uri.UriSchemeMailto.Length + 1; // "mailto" + ":"
-            return AreSame(uri1.ToString().Substring(prefixLength), 
-                uri2.ToString().Substring(prefixLength), domainAliases);
+                int prefixLength = Uri.UriSchemeMailto.Length + 1; // "mailto" + ":"
+                return AreSame(uri1.ToString().Substring(prefixLength),
+                    uri2.ToString().Substring(prefixLength), domainAliases);
+            }
+            catch(Exception ex)
+            {
+                s_logger.Error($"Fail to compare {uri1.OriginalString} and {uri2.OriginalString}", ex);
+                return false;
+            }
         }
     }
 }

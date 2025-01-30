@@ -35,6 +35,7 @@ using Y360OutlookConnector.Clients;
 using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Synchronization.EntityMappers;
 using Y360OutlookConnector.Synchronization.Synchronizer.SyncStrategy;
+using Y360OutlookConnector.Utilities;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector.Synchronization.Synchronizer
@@ -53,11 +54,13 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         private readonly IComWrapperFactory _comWrapperFactory = new ComWrapperFactory();
         private readonly IExceptionHandlingStrategy _exceptionHandlingStrategy = new ExceptionHandlingStrategy();
         private readonly InvitesInfoStorage _invitesInfoStorage;
+        private readonly IDateTimeRangeProvider _dateTimeRangeProvider;
 
         private readonly IEqualityComparer<DateTime> _aTypeVersionComparer = Factories.CreateDateTimeEqualityComparer();
 
         public SynchronizerFactory(IOutlookSession outlookSession, IHttpClientFactory httpClientFactory,
             string profileDataFolder, ITotalProgressFactory totalProgressFactory,
+            IDateTimeRangeProvider dateTimeRangeProvider,
             InvitesInfoStorage invitesInfoStorage)
         {
             _profileDataFolder = profileDataFolder;
@@ -66,6 +69,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             _httpClientFactory = httpClientFactory;
             _outlookSession = outlookSession;
             _invitesInfoStorage = invitesInfoStorage;
+            _dateTimeRangeProvider = dateTimeRangeProvider;
         }
 
         public CancellableSynchronizer CreateSynchronizer(SyncTargetInfo syncTarget, string userEmail,
@@ -83,7 +87,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 case SyncTargetType.Calendar:
                     return CreateEventSynchronizer(new Uri(syncTarget.Config.Url),
                         syncTarget.Config.OutlookFolderEntryId, syncTarget.Config.OutlookFolderStoreId,
-                        GetAccountForFolder(folder), userEmail, serverUserCommonName, syncTarget.IsReadOnly,
+                        folder.GetAccount(), userEmail, serverUserCommonName, syncTarget.IsReadOnly,
                         storageDataDir);
                 case SyncTargetType.Tasks:
                     return CreateTaskSynchronizer(new Uri(syncTarget.Config.Url),
@@ -305,13 +309,11 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 new EntityRelationDataAccess<AppointmentId, DateTime, OutlookEventRelationData, WebResourceName,
                     string>(storageDataDirectory);
 
-            var dateTimeRangeProvider = Factories.CreateDateTimeRangeProvider(60, 365);
-
             var aTypeRepository = new OutlookEventRepositoryWrapper(
                 _outlookSession,
                 outlookFolderEntryId,
                 outlookFolderStoreId,
-                dateTimeRangeProvider,
+                _dateTimeRangeProvider,
                 mappingParameters,
                 _daslFilterProvider,
                 new QueryAppointmentFolderStrategy(),
@@ -327,7 +329,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 calDavDataAccess,
                 new iCalendarSerializer(),
                 CalDavRepository.EntityType.Event,
-                dateTimeRangeProvider,
+                _dateTimeRangeProvider,
                 false,
                 bTypeVersionComparer);
 
@@ -519,20 +521,6 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 // Default to GMT if Windows Zone can't be mapped to IANA zone.
                 return "Etc/GMT";
             }
-        }
-
-        private static string GetAccountForFolder(Outlook.MAPIFolder folder)
-        {
-            var store = folder.Store;
-            var application = folder.Application;
-
-            foreach (Outlook.Account account in application.Session.Accounts)
-            {
-                if (account.DeliveryStore.StoreID == store.StoreID)
-                    return account.SmtpAddress;
-            }
-
-            return String.Empty;
         }
 
         private IInitialSyncStateCreationStrategy<AppointmentId, DateTime, IAppointmentItemWrapper,

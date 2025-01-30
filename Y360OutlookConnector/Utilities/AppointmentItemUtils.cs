@@ -6,6 +6,7 @@ using System.Net;
 using System.Reflection;
 using CalDavSynchronizer.Implementation.Common;
 using CalDavSynchronizer.Implementation.ComWrappers;
+using GenSync.Logging;
 using log4net;
 using Microsoft.Office.Interop.Outlook;
 using Outlook = Microsoft.Office.Interop.Outlook;
@@ -94,7 +95,31 @@ namespace Y360OutlookConnector.Utilities
             return bytes;
         }
 
-        public static DateTime GetLastChangeTime(Outlook.AppointmentItem appointment)
+        public static string GetAccount(this Folder folder)
+        {
+            var store = folder.Store;
+            var application = folder.Application;
+
+            foreach (Account account in application.Session.Accounts)
+            {
+                if (account.DeliveryStore.StoreID == store.StoreID)
+                    return account.SmtpAddress;
+            }
+
+            return String.Empty;
+        }
+
+        public static string GetOrganizerEmailAddress(this AppointmentItem appointment, IEntitySynchronizationLogger logger)
+        {
+            var organizer = appointment.GetOrganizer();
+            if (organizer == null)
+            {
+                return null;
+            }
+            return OutlookUtility.GetEmailAdressOrNull(organizer, logger, s_logger);
+        }
+
+        public static DateTime GetLastChangeTime(AppointmentItem appointment)
         {
             var lastChangeTime = appointment.LastModificationTime.ToUniversalTime();
             using (var wrapper = GenericComObjectWrapper.Create(appointment.PropertyAccessor))

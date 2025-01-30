@@ -1,0 +1,57 @@
+BEGIN:VCALENDAR
+PRODID:-//Microsoft Corporation//Outlook 16.0 MIMEDIR//EN
+VERSION:2.0
+METHOD:REQUEST
+X-MS-OLK-FORCEINSPECTOROPEN:TRUE
+BEGIN:VTIMEZONE
+TZID:Russian Standard Time
+BEGIN:STANDARD
+DTSTART:16010101T000000
+TZOFFSETFROM:+0300
+TZOFFSETTO:+0300
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+ATTENDEE;CN="test08@компанияикс.рф";RSVP=TRUE:mailto:test08@компанияикс
+	.рф
+CLASS:PUBLIC
+CREATED:20241011T125054Z
+DESCRIPTION: \n\n
+DTEND;TZID="Russian Standard Time":20241011T173000
+DTSTAMP:20241011T125042Z
+DTSTART;TZID="Russian Standard Time":20241011T170000
+LAST-MODIFIED:20241011T125107Z
+LOCATION:test
+ORGANIZER;CN="test07@Компанияикс.рф":mailto:test07@Компанияикс.рф
+PRIORITY:5
+SEQUENCE:0
+SUMMARY;LANGUAGE=ru:test
+TRANSP:OPAQUE
+UID:040000008200E00074C5B7101A82E00800000000E052F453F51BDB01000000000000000
+	010000000720FB7490D3F664A95367A403FBD65A4
+X-ALT-DESC;FMTTYPE=text/html:<html xmlns:v="urn:schemas-microsoft-com:vml" 
+	xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-mic
+	rosoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/
+	12/omml" xmlns="http://www.w3.org/TR/REC-html40"><head><meta name=Generato
+	r content="Microsoft Word 15 (filtered medium)"><style><!--\n/* Font Defin
+	itions */\n@font-face\n	{font-family:"Cambria Math"\;\n	panose-1:2 4 5 3 5
+	 4 6 3 2 4\;}\n@font-face\n	{font-family:Aptos\;}\n/* Style Definitions */
+	\np.MsoNormal\, li.MsoNormal\, div.MsoNormal\n	{margin:0cm\;\n	font-size:1
+	1.0pt\;\n	font-family:"Aptos"\,sans-serif\;}\nspan.EmailStyle18\n	{mso-sty
+	le-type:personal-compose\;}\n.MsoChpDefault\n	{mso-style-type:export-only\
+	;\n	font-size:10.0pt\;\n	mso-ligatures:none\;}\n@page WordSection1\n	{size
+	:612.0pt 792.0pt\;\n	margin:2.0cm 42.5pt 2.0cm 3.0cm\;}\ndiv.WordSection1\
+	n	{page:WordSection1\;}\n--></style><!--[if gte mso 9]><xml>\n<o:shapedefa
+	ults v:ext="edit" spidmax="1026" />\n</xml><![endif]--><!--[if gte mso 9]>
+	<xml>\n<o:shapelayout v:ext="edit">\n<o:idmap v:ext="edit" data="1" />\n</
+	o:shapelayout></xml><![endif]--></head><body lang=EN-US link="#467886" vli
+	nk="#96607D" style='word-wrap:break-word'><div class=WordSection1><p class
+	=MsoNormal><o:p>&nbsp\;</o:p></p></div></body></html>
+X-MICROSOFT-CDO-BUSYSTATUS:TENTATIVE
+X-MICROSOFT-CDO-IMPORTANCE:1
+X-MICROSOFT-CDO-INTENDEDSTATUS:BUSY
+X-MICROSOFT-DISALLOW-COUNTER:FALSE
+X-MS-OLK-AUTOSTARTCHECK:FALSE
+X-MS-OLK-CONFTYPE:0
+END:VEVENT
+END:VCALENDAR

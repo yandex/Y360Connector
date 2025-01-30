@@ -19,7 +19,7 @@ namespace Y360OutlookConnector.Ui.Login
         private readonly HttpClientFactory _httpClientFactory;
 
         private LogonSession _logonSession;
-        private ConfirmationCodePage _confirmationCodePage;
+        private IConfirmationCodePage _confirmationCodePage;
         private ErrorPage _errorPage;
         private bool _isAuthComplete;
 
@@ -97,7 +97,7 @@ namespace Y360OutlookConnector.Ui.Login
 
         }
 
-        private async void ConfirmationCodePage_CodeEnteredAsync(object sender, ConfirmationCodePage.CodeEnteredArgs e)
+        private async void ConfirmationCodePage_CodeEnteredAsync(object sender, CodeEnteredArgs e)
         {
             await HandleConfirmationCodeAsync(e.Code, true);
         }
@@ -136,6 +136,16 @@ namespace Y360OutlookConnector.Ui.Login
             await OpenInExternalBrowser(_logonSession.GetOAuthUrl());
         }
 
+        private IConfirmationCodePage CreateConfirmationCodePage()
+        {
+            if (AppConfig.IsStrongCodeConfirmationUsed)
+            {
+                return new ConfirmationStrongCodePage();
+            }
+
+            return new ConfirmationCodePage();
+        }
+
         private async Task OpenInExternalBrowser(Uri url)
         {
             ShowThrobber(true);
@@ -152,7 +162,7 @@ namespace Y360OutlookConnector.Ui.Login
                 await Task.Delay(1000);
             }
 
-            _confirmationCodePage = new ConfirmationCodePage();
+            _confirmationCodePage = CreateConfirmationCodePage();
             _confirmationCodePage.CodeEntered += ConfirmationCodePage_CodeEnteredAsync;
             CurrentPage.Content = _confirmationCodePage;
 
@@ -180,16 +190,19 @@ namespace Y360OutlookConnector.Ui.Login
             try
             {
                 var accessToken = await _logonSession.RequestTokenAsync(confirmationCode);
+
+                var eventPrefix = AppConfig.IsStrongCodeConfirmationUsed ? "sixteen_chars" : "seven_digits";
+
                 if (String.IsNullOrEmpty(accessToken) && _confirmationCodePage != null)
                 {
                     _confirmationCodePage.IsAlarmed = true;
-                    Telemetry.Signal(Telemetry.LoginWindowEvents, "seven_digits_code_rejected");
+                    Telemetry.Signal(Telemetry.LoginWindowEvents, $"{eventPrefix}_code_rejected");
                     return;
                 }
 
                 if (isExternalAuth)
                 {
-                    Telemetry.Signal(Telemetry.LoginWindowEvents, "seven_digits_code_accepted");
+                    Telemetry.Signal(Telemetry.LoginWindowEvents, $"{eventPrefix}_code_accepted");
                 }
 
                 ThisAddIn.RestoreUiContext();

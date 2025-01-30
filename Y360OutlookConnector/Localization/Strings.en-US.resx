@@ -192,6 +192,12 @@
   <data name="Messages_ProxyErrorMessageTitle" xml:space="preserve">
     <value>Syncing doesn't work</value>
   </data>
+  <data name="Messages_SyncAllMessageDescription" xml:space="preserve">
+    <value>This operation may take a long time. Are you sure you want to continue?</value>
+  </data>
+  <data name="Messages_SyncAllMessageTitle" xml:space="preserve">
+    <value>Synchronization of events without restrictions</value>
+  </data>
   <data name="Messages_SyncFailureMessageDescription" xml:space="preserve">
     <value>Server error occured. We're working to fix it. Once it's fixed, data exchange will resume automatically.</value>
   </data>
@@ -468,6 +474,9 @@ Select a folder with elements of the "Tasks" type</value>
   <data name="Toolbar_SettingsButton" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Toolbar_SyncAllNowButton" xml:space="preserve">
+    <value>Sync all</value>
+  </data>
   <data name="Toolbar_SyncNowButton" xml:space="preserve">
     <value>Sync</value>
   </data>
@@ -478,10 +487,10 @@ Select a folder with elements of the "Tasks" type</value>
     <value>Events, tasks, and contacts</value>
   </data>
   <data name="YandexCalendar_Toolbar_EditEventButton" xml:space="preserve">
-    <value>Редактировать событие</value>
+    <value>Edit event</value>
   </data>
   <data name="YandexCalendar_Toolbar_NavigateToCalendarButton" xml:space="preserve">
-    <value>Перейти в Календарь</value>
+    <value>Open Calendar</value>
   </data>
   <data name="YandexCalendar_Toolbar_RibbonToolbarButton" xml:space="preserve">
     <value>Yandex Calendar</value>

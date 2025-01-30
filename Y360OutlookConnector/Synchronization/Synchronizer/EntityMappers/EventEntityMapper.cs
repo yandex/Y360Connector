@@ -17,6 +17,7 @@ using GenSync.Logging;
 using log4net;
 using Microsoft.Office.Interop.Outlook;
 using NodaTime;
+using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Utilities;
 using Exception = Microsoft.Office.Interop.Outlook.Exception;
 using Period = DDay.iCal.Period;
@@ -98,6 +99,20 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         public async Task<IICalendar> Map1To2(IAppointmentItemWrapper sourceWrapper, IICalendar existingTargetCalender, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
         {
             var newTargetCalender = new iCalendar();
+
+            if (AppConfig.IsAlwaysSkipInvitationEmails && existingTargetCalender.IsNew())
+            {
+                var organizerEmail = sourceWrapper.Inner.GetOrganizerEmailAddress(logger);
+
+                if (EmailAddress.AreSame(organizerEmail, _outlookEmailAddress, EmailAddress.KnownDomainsAliases))
+                {
+                    // Это создание новой встречи. Организатором является сам пользователь.
+                    // Событие отсутствует в календаре, но присутствует в Outlook и это новое событие
+                    // Добавляем свойство, что не требуется посылать приглашение
+                    newTargetCalender.AddSkipInvitationProperty();
+                }                
+            }
+            
 
             ITimeZone startIcalTimeZone = null;
             ITimeZone endIcalTimeZone = null;
@@ -185,7 +200,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             var existingTargetEvent = existingTargetCalender.Events.FirstOrDefault(e => e.RecurrenceID == null);
 
             var newTargetEvent = new Event();
-
+           
             if (existingTargetEvent != null)
                 newTargetEvent.UID = existingTargetEvent.UID;
             else if (_configuration.UseGlobalAppointmentID)

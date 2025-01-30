@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CalDavSynchronizer.Implementation.TimeRangeFiltering;
+using TinyCalDavSynchronizer;
 using Y360OutlookConnector.Clients;
 using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Synchronization.Progress;
@@ -21,6 +23,24 @@ namespace Y360OutlookConnector.Synchronization
         private Dictionary<Guid, SyncTargetRunner> _runnersById = new Dictionary<Guid, SyncTargetRunner>();
         private bool _isFullSyncRunning;
 
+        private readonly CustomDateTimeRangeProvider _dateTimeRangeProvider;
+
+        private class CustomDateTimeRangeProvider : IDateTimeRangeProvider
+        {
+            private readonly IDateTimeRangeProvider _dateRangeProvider;
+            public CustomDateTimeRangeProvider()
+            {
+                _dateRangeProvider = Factories.CreateDateTimeRangeProvider(60, 365);
+            }
+
+            public DateTimeRange? GetRange()
+            {
+                return NoDateRangeApplied ? null : _dateRangeProvider.GetRange();
+            }
+
+            public bool NoDateRangeApplied { get; set; }
+        }
+
         public Scheduler(Outlook.NameSpace nameSpace, IHttpClientFactory httpClientFactory, 
             string profileDataDir, GenSync.Logging.ISynchronizationReportSink reportSink, 
             InvitesInfoStorage invitesInfo)
@@ -31,8 +51,10 @@ namespace Y360OutlookConnector.Synchronization
 
             var outlookSession = new CalDavSynchronizer.OutlookSession(nameSpace);
 
+            _dateTimeRangeProvider = new CustomDateTimeRangeProvider();
+
             _synchronizerFactory = new SynchronizerFactory(outlookSession, httpClientFactory1,
-                profileDataDir, _totalProgressFactory, invitesInfo);
+                profileDataDir, _totalProgressFactory, _dateTimeRangeProvider, invitesInfo);
 
             _reportSink = reportSink;
         }
@@ -92,7 +114,7 @@ namespace Y360OutlookConnector.Synchronization
             _runnersById = new Dictionary<Guid, SyncTargetRunner>();
         }
 
-        public async Task<bool> RunSynchronization(bool wasManuallyTriggered, Dictionary<Guid,string> ctags)
+        public async Task<bool> RunSynchronization(bool wasManuallyTriggered, bool noDateConstraint, Dictionary<Guid,string> ctags)
         {
             bool result = false;
 
@@ -101,6 +123,10 @@ namespace Y360OutlookConnector.Synchronization
             _isFullSyncRunning = true;
             try
             {
+                if (noDateConstraint)
+                {
+                    _dateTimeRangeProvider.NoDateRangeApplied = true;
+                }
                 using (var syncSession = new SyncSessionProgress(_totalProgressFactory, wasManuallyTriggered))
                 {
                     var alreadyRan = new HashSet<Guid>();
@@ -134,6 +160,10 @@ namespace Y360OutlookConnector.Synchronization
             finally
             {
                 _isFullSyncRunning = false;
+                if (noDateConstraint)
+                {
+                    _dateTimeRangeProvider.NoDateRangeApplied = false;
+                }
             }
 
             return result;
