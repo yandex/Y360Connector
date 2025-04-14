@@ -434,6 +434,10 @@
     <Resource Include="Resources\SyncNow.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CalDavSynchronizer\CalDavSynchronizer.Conversions\CalDavSynchronizer.Conversions.csproj">
+      <Project>{71021DE1-8DC8-4414-AF56-FE821DD92F47}</Project>
+      <Name>CalDavSynchronizer.Conversions</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CalDavSynchronizer\GenSync\GenSync.csproj">
       <Project>{76C932E7-ECA5-4010-B602-2104327EE5EE}</Project>
       <Name>GenSync</Name>

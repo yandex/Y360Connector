@@ -145,7 +145,6 @@ namespace Y360OutlookConnector
                 if (langId == 1049)
                     cultureName = "ru-RU";
             }
-                        
             // Устанавливаем язык ресурсов приложения в один из поддерживаемых (или русский или английский)
             Localization.Strings.Culture = new System.Globalization.CultureInfo(cultureName);
         }

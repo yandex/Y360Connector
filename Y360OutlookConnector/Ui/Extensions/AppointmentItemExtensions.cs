@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using Microsoft.Office.Interop.Outlook;
 using Newtonsoft.Json;
 using Y360OutlookConnector.Clients;
 using Y360OutlookConnector.Clients.Telemost.Model;
+using RichTextBox = System.Windows.Forms.RichTextBox;
 
 namespace Y360OutlookConnector.Ui.Extensions
 {
@@ -97,7 +99,7 @@ namespace Y360OutlookConnector.Ui.Extensions
             property.Value = newValue;
         }
 
-        private static void PrependTextToBody(this AppointmentItem appointment, string text)
+        private static void PrependTextToBody(this AppointmentItem appointment, string text, bool IsAddAsRTF = false)
         {
             if (appointment == null)
             {
@@ -110,24 +112,52 @@ namespace Y360OutlookConnector.Ui.Extensions
             }
 
             var body = appointment.GetBody();
-
             if (string.IsNullOrEmpty(body))
             {
                 appointment.Body = text;
+                return;
             }
-            else
+
+            if (IsAddAsRTF)
             {
-                var sb = new StringBuilder(text);
-
-                // Добавляем перевод строки, только если текст в теле сообщения не начинается с перевода строки
-                if (!body.StartsWith(Environment.NewLine))
+                var rtfBody = ConvertTextToRtf(text);
+                if (rtfBody != null)
                 {
-                    sb.AppendLine();
+                    appointment.RTFBody = rtfBody;
+                    return;
                 }
-                sb.Append(body);
-
-                appointment.Body = sb.ToString();
+                s_logger.Warn("RTF body conversion failed. Using plain text instead.");
             }
+
+            var sb = new StringBuilder(text);
+            // Добавляем перевод строки, только если текст в теле сообщения не начинается с перевода строки
+            if (!body.StartsWith(Environment.NewLine))
+            {
+                sb.AppendLine();
+            }
+            sb.Append(body);
+            appointment.Body = sb.ToString();
+        }
+
+        private static byte[] ConvertTextToRtf(string text, string fontName = "Calibri", float fontSize = 12)
+        {
+            byte[] result = null;
+            try
+            {
+                using (RichTextBox RTB = new RichTextBox())
+                {
+                    RTB.Text = text;
+                    RTB.SelectAll();
+                    RTB.SelectionFont = new Font(fontName, fontSize);
+
+                    result = System.Text.Encoding.Default.GetBytes(RTB.Rtf);
+                }
+            }
+            catch (System.Exception e)
+            {
+                s_logger.Error($"Can't convert text to RTF format. Input text: '{text}'", e);
+            }
+            return result;
         }
 
         private static string GetBody(this AppointmentItem appointment)
@@ -160,10 +190,10 @@ namespace Y360OutlookConnector.Ui.Extensions
                 if (result.Exception is NoInternetException)
                 {
                     message = Localization.Strings.Telemost_Messages_NoInternetErrorMessage;
-                } 
-                else 
+                }
+                else
                 {
-                    message = string.Format(msgFormat, "?");
+                    message = string.Format(msgFormat, " ? ");
                 }
             }
 
@@ -237,7 +267,7 @@ namespace Y360OutlookConnector.Ui.Extensions
 
                 if (pos < 0)
                 {
-                    currentAppointment.PrependTextToBody(newText);
+                    currentAppointment.PrependTextToBody(newText, true);
                 }
                 else
                 {
@@ -267,7 +297,6 @@ namespace Y360OutlookConnector.Ui.Extensions
                             textAfter = currentBody.Substring(pos + linkText.Length);
                         }
                     }
-                    
                     currentAppointment.SetBody(newText.InsertText(textBefore, textAfter));
                 }
 
@@ -350,8 +379,7 @@ namespace Y360OutlookConnector.Ui.Extensions
                     body.AppendLine();
                     body.Append(Localization.Strings.Telemost_Messages_MeetingInternalMessage);
                 }
-
-                currentAppointment.PrependTextToBody(body.ToString());
+                currentAppointment.PrependTextToBody(body.ToString(), true);
             }
         }
 

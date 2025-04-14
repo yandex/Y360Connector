@@ -22,6 +22,7 @@ namespace Y360OutlookConnector.Configuration
             _options = CreateDefaultOptions();
             _dataFolderPath = dataFolderPath;
             _options = LoadOptions();
+            EnsureBackWardCompatibility();
         }
 
         public GeneralOptions Options
@@ -41,6 +42,16 @@ namespace Y360OutlookConnector.Configuration
             }
         }
 
+        private void EnsureBackWardCompatibility()
+        {
+            if (_options.HasMigratedToDebugLoggingByDefault)
+                return;
+
+            _options.UseDebugLevelLogging = true;
+            _options.HasMigratedToDebugLoggingByDefault = true;
+
+            Options = _options;
+        }
         private GeneralOptions LoadOptions()
         {
             var fileName = Path.Combine(_dataFolderPath, GeneralOptionsFileName);

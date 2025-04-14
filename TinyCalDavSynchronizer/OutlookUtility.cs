@@ -38,6 +38,8 @@ namespace CalDavSynchronizer.Implementation.Common
                     return null;
                 }
 
+                TryToLogAddressEntry(addressEntry, generalLogger, logger);
+
                 if (type == OlAddressEntryUserType.olExchangeUserAddressEntry
                     || type == OlAddressEntryUserType.olExchangeRemoteUserAddressEntry
                     || type == OlAddressEntryUserType.olExchangeAgentAddressEntry
@@ -197,6 +199,25 @@ namespace CalDavSynchronizer.Implementation.Common
         public static string RemoveEmailFromName(Recipient recipient)
         {
             return Regex.Replace(recipient.Name, " \\([^()]*\\)$", string.Empty);
+        }
+
+        private static void TryToLogAddressEntry(AddressEntry addressEntry, ILog generalLogger, IEntitySynchronizationLogger logger)
+        {
+            try
+            {
+                generalLogger.Warn($"Processing AddressEntry: Name = {addressEntry?.Name ?? "Empty"}, " +
+                                 $"Type = {addressEntry?.Type ?? "Empty"}, " +
+                                 $"Address = {addressEntry?.Address}");
+
+                logger.LogWarning($"Processing AddressEntry: Name = {addressEntry?.Name ?? "Empty"}, " +
+                                 $"Type = {addressEntry?.Type ?? "Empty"}, " +
+                                 $"Address = {addressEntry?.Address}");
+            }
+            catch(System.Exception ex)
+            {
+                generalLogger.Error("Error on attemp to log AddressEntry", ex);
+                logger.LogError("Error on attemp to log AddressEntry", ex);
+            }
         }
     }
 }
