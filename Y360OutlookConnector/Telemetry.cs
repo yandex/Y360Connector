@@ -21,6 +21,7 @@ namespace Y360OutlookConnector
         public const string SyncReportsEvents = "sync_reports";
         public const string TelemostApiCalls = "telemost_api_calls";
         public const string TelemostSettingsWindowEvents = "telemost_settings_window";
+        public const string ConfirmedBugEvent = "confirmed_bug_event";
 
         public static void Initialize(string dataFolder)
         {

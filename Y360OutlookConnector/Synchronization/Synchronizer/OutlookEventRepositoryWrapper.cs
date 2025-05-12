@@ -14,6 +14,7 @@ using CalDavSynchronizer.Implementation.TimeRangeFiltering;
 using GenSync;
 using GenSync.EntityRepositories;
 using GenSync.Logging;
+using log4net;
 using Y360OutlookConnector.Utilities;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
@@ -21,6 +22,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
 {
     public class OutlookEventRepositoryWrapper : IEntityRepository<AppointmentId, DateTime, IAppointmentItemWrapper, IEventSynchronizationContext>
     {
+        private static readonly ILog s_logger = LogManager.GetLogger(System.Reflection.MethodInfo.GetCurrentMethod().DeclaringType);
         private readonly EventMappingConfiguration _configuration;
         private readonly IOutlookSession _session;
         private readonly string _folderId;
@@ -75,9 +77,34 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             return Inner.Get(ids, logger, context);
         }
 
-        public Task<IEnumerable<EntityVersion<AppointmentId, DateTime>>> GetAllVersions(IEnumerable<AppointmentId> idsOfknownEntities, IEventSynchronizationContext context, IGetVersionsLogger logger)
+        public async Task<IEnumerable<EntityVersion<AppointmentId, DateTime>>> GetAllVersions(IEnumerable<AppointmentId> idsOfknownEntities, IEventSynchronizationContext context, IGetVersionsLogger logger)
         {
-            return Inner.GetAllVersions(idsOfknownEntities, context, logger);
+            var events = await Inner.GetAllVersions(idsOfknownEntities, context, logger);
+            var eventsList = events.ToList();
+
+            var missingEntities = idsOfknownEntities
+                .Where(known => !eventsList.Any(e => e.Id.EntryId == known.EntryId))
+                .ToList();
+
+            if (missingEntities.Any())
+            {
+                var foundedMissingEntities = new List<EntityVersion<AppointmentId, DateTime>>();
+                s_logger.Info($"Got items from Outlook: {eventsList.Count()} and KnownEntities contains: {idsOfknownEntities.Count()}");
+                foreach (var id in missingEntities)
+                {
+                    var item = _session.GetAppointmentItemOrNull(id.EntryId, _folderId, _folderStoreId);
+                    if (item != null)
+                    {
+                        s_logger.Info($"Successfully received aType Id - {id.EntryId} | {item?.Subject}");
+                        Telemetry.Signal(Telemetry.ConfirmedBugEvent, "error_found_missed_meeting_outlook");
+                        foundedMissingEntities.Add(AppointmentSlim.FromAppointmentItem(item).Version);
+                    }
+                }
+
+                if (foundedMissingEntities != null)
+                    eventsList.AddRange(foundedMissingEntities);
+            }
+            return eventsList;
         }
 
         public Task<IEnumerable<EntityVersion<AppointmentId, DateTime>>> GetVersions(IEnumerable<IdWithAwarenessLevel<AppointmentId>> idsOfEntitiesToQuery, IEventSynchronizationContext context, IGetVersionsLogger logger)
