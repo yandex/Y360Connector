@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CalDavSynchronizer.Contracts;
 using CalDavSynchronizer.DDayICalWorkaround;
@@ -28,6 +29,9 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
     public class EventEntityMapper : IEntityMapper<IAppointmentItemWrapper, IICalendar, IEventSynchronizationContext>
     {
         private static readonly ILog s_logger = LogManager.GetLogger(MethodInfo.GetCurrentMethod().DeclaringType);
+        private static readonly Regex _htmlTag = new Regex(@"<[^>\r\n]{1,100}>", RegexOptions.Compiled);
+        private static readonly Regex _ctrlChars = new Regex(@"[\x00-\x08\x0B\x0C\x0E-\x1F]", RegexOptions.Compiled);
+
 
         private const string PR_SENDER_NAME = "http://schemas.microsoft.com/mapi/proptag/0x0C1A001E";
         private const string PR_SENDER_EMAIL_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x0C1F001E";
@@ -273,6 +277,11 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             if (_configuration.MapBody)
             {
                 target.Description = CalendarDataPreprocessor.EncodeString(source.Body);
+                if (IsBodyBroken(source.Body, target.Description))
+                {
+                    s_logger.Error($"Error on mapping Description from Outlook to Calendar. \r\n Outlook: {source.Body}  \r\n Calendar: {target.Description}");
+                    Telemetry.Signal(Telemetry.ConfirmedBugEvent, "error_mapping_description_1To2");
+                }
             }
 
             target.Priority = CommonEntityMapper.MapPriority1To2(source.Importance);
@@ -2000,11 +2009,66 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             if (_configuration.MapBody)
             {
                 target.Body = source.Description;
+                if (!string.IsNullOrWhiteSpace(source.Description) && !target.Body.Equals(source.Description))
+                {
+                    s_logger.Error($"Error on mapping Description. \r\n Calendar: {source.Description} \r\n Outlook: {target.Body}");
+                    Telemetry.Signal(Telemetry.ConfirmedBugEvent, "error_mapping_description_2To1");
+                }
             }
             else
             {
                 target.Body = string.Empty;
             }
+        }
+
+        private bool IsBodyBroken(string original, string encoded)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(original) && string.IsNullOrEmpty(encoded)) return false;
+
+                if (string.IsNullOrEmpty(original) || string.IsNullOrEmpty(encoded)) return true;
+
+                // Символ �
+                if (encoded.Contains('\uFFFD') && !original.Contains('\uFFFD')) return true;
+
+                // Проверяю html и др. рабочие теги
+                if (_htmlTag.IsMatch(encoded) && !_htmlTag.IsMatch(original)) return true;
+                if (_ctrlChars.IsMatch(encoded) && !_ctrlChars.IsMatch(original)) return true;
+
+                // На всякий случай фиксирую, если аномально увеличилась длина строки
+                if (encoded.Length > original.Length * 1.3) return true;
+
+                // Хвостовые «пустые» символы (пробелы, \t, \0, NBSP), которых нет в оригинале
+                if (EndsWithPadding(encoded) && !EndsWithPadding(original)) return true;
+            }
+            catch(System.Exception ex)
+            {
+                s_logger.Error($"Unexpected error on attemp to check IsBodyBroken. Original: {original} \r\n Encoded: {encoded}", ex);
+                return true;
+            }
+           
+            return false;
+        }
+
+        private static bool EndsWithPadding(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+
+            int i = s.Length;
+            while (i > 0 && (s[i - 1] == '\n' ||  s[i - 1] == '\r'))
+                i--;
+
+            if (i == 0) return false;
+
+            //Проверяем символ, идущий сразу после CR/LF-хвоста
+            char last = s[i - 1];
+
+            return last == '\0' || // null-byte
+                    last == '\u00A0' ||   // NBSP
+                    last == ' ' || 
+                    last == '\t';
+
         }
 
         private void MapAttendeesAndOrganizer2To1(IEvent source, AppointmentItem target, IEntitySynchronizationLogger logger)

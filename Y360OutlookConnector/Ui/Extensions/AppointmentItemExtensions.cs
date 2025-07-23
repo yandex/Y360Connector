@@ -118,9 +118,17 @@ namespace Y360OutlookConnector.Ui.Extensions
                 return;
             }
 
+            var sb = new StringBuilder(text);
+            // Добавляем перевод строки, только если текст в теле сообщения не начинается с перевода строки
+            if (!body.StartsWith(Environment.NewLine))
+            {
+                sb.AppendLine();
+            }
+            sb.Append(body);
+
             if (IsAddAsRTF)
             {
-                var rtfBody = ConvertTextToRtf(text);
+                var rtfBody = ConvertTextToRtf(sb.ToString());
                 if (rtfBody != null)
                 {
                     appointment.RTFBody = rtfBody;
@@ -129,13 +137,6 @@ namespace Y360OutlookConnector.Ui.Extensions
                 s_logger.Warn("RTF body conversion failed. Using plain text instead.");
             }
 
-            var sb = new StringBuilder(text);
-            // Добавляем перевод строки, только если текст в теле сообщения не начинается с перевода строки
-            if (!body.StartsWith(Environment.NewLine))
-            {
-                sb.AppendLine();
-            }
-            sb.Append(body);
             appointment.Body = sb.ToString();
         }
 
