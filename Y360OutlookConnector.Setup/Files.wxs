@@ -52,6 +52,51 @@
             <File Source="$(var.BinOutputDir)\Microsoft.Office.Tools.Outlook.v4.0.Utilities.dll" />
             <File Source="$(var.BinOutputDir)\Microsoft.Office.Tools.Common.v4.0.Utilities.dll" />
         </Component>
+        
+        <!-- WebView2 managed assemblies component -->
+        <Component Id="WebView2ManagedComponent" Directory="FilesRoot" Guid="103413F2-9957-4304-B784-A28FE90CD902">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="WebView2ManagedComponent" Value="Installed" Type="string" KeyPath="yes" />
+            </RegistryKey>
+
+            <File Source="$(var.BinOutputDir)\Microsoft.Web.WebView2.Core.dll" />
+            <File Source="$(var.BinOutputDir)\Microsoft.Web.WebView2.Wpf.dll" />
+        </Component>
+
+        <!-- WebView2 native runtime components -->
+        <Component Id="WebView2LoaderX86Component" Directory="RuntimesWinX86NativeDir" Guid="6DB51CE4-B284-4160-B437-FBAEE02D98EA">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="WebView2LoaderX86Component" Value="Installed" Type="string" KeyPath="yes" />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveRuntimesWinX86NativeDir" Directory="RuntimesWinX86NativeDir" On="uninstall" />
+            <RemoveFolder Id="RemoveRuntimesWinX86Dir" Directory="RuntimesWinX86Dir" On="uninstall" />
+            <RemoveFolder Id="RemoveRuntimesDir" Directory="RuntimesDir" On="uninstall" />
+
+            <File Id="win_x86.WebView2Loader.dll" Source="$(var.BinOutputDir)\runtimes\win-x86\native\WebView2Loader.dll" />
+        </Component>
+
+        <Component Id="WebView2LoaderX64Component" Directory="RuntimesWinX64NativeDir" Guid="9D5AC33B-A865-47F4-94C7-172E52B55E21">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="WebView2LoaderX64Component" Value="Installed" Type="string" KeyPath="yes" />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveRuntimesWinX64NativeDir" Directory="RuntimesWinX64NativeDir" On="uninstall" />
+            <RemoveFolder Id="RemoveRuntimesWinX64Dir" Directory="RuntimesWinX64Dir" On="uninstall" />
+
+            <File Id="win_x64.WebView2Loader.dll" Source="$(var.BinOutputDir)\runtimes\win-x64\native\WebView2Loader.dll" />
+        </Component>
+
+        <Component Id="WebView2LoaderArm64Component" Directory="RuntimesWinArm64NativeDir" Guid="334CCB78-90A1-4A82-A6B9-F39394A5C519">
+            <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector.Installer">
+                <RegistryValue Name="WebView2LoaderArm64Component" Value="Installed" Type="string" KeyPath="yes" />
+            </RegistryKey>
+
+            <RemoveFolder Id="RemoveRuntimesWinArm64NativeDir" Directory="RuntimesWinArm64NativeDir" On="uninstall" />
+            <RemoveFolder Id="RemoveRuntimesWinArm64Dir" Directory="RuntimesWinArm64Dir" On="uninstall" />
+
+            <File Id="win_arm64.WebView2Loader.dll" Source="$(var.BinOutputDir)\runtimes\win-arm64\native\WebView2Loader.dll" />
+        </Component>
 
     </Fragment>
 </Wix>

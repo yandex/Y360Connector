@@ -27,6 +27,7 @@ namespace Y360OutlookConnector.Synchronization
         private readonly SynchronizerFactory _synchronizerFactory;
         private readonly FolderMonitorFactory _folderMonitorFactory;
         private readonly ISynchronizationReportSink _reportSink;
+        private readonly FailedEntityTracker _failedEntityTracker;
         private ConfigData _data;
         private string _prevCTag;
 
@@ -49,10 +50,65 @@ namespace Y360OutlookConnector.Synchronization
 
             ProfileId = profileId;
             LastAutoSyncTime = DateTime.MinValue;
+            _failedEntityTracker = new FailedEntityTracker();
 
             _partialSyncTimer = new System.Windows.Forms.Timer();
             _partialSyncTimer.Tick += PartialSyncTimerTickAsync;
             _partialSyncTimer.Interval = (int) _partialSyncDelay.TotalMilliseconds;
+        }
+
+        public async Task RetryFailedEntities()
+        {
+            try
+            {
+                var retryableEntities = _failedEntityTracker.GetRetryableEntities();
+                if (retryableEntities.Any())
+                {
+                    s_logger.Info($"Retrying '{retryableEntities.Count}' failed entities for target '{_data.Name}'");
+
+                    foreach (var entity in retryableEntities)
+                    {
+                        _failedEntityTracker.MarkEntityAsRetried(entity.EntityId, entity.EntityType);
+                        s_logger.Info($"Marked entity for retry: {entity.EntityType} - {entity.EntityId}");
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(15));
+
+                    if (_data.TargetKind == SyncTargetType.Calendar)
+                    {
+                        var eventEntities = retryableEntities
+                            .Where(e => e.EntityType == "Event")
+                            .ToList();
+                        if (eventEntities.Any())
+                        {
+                            var outlookIds = eventEntities
+                                .Select(e => CreateOutlookId(e.EntityId, e.EntityType))
+                                .ToArray();
+                            s_logger.Info($"Retrying '{outlookIds.Length}' failed calendar events for target '{_data.Name}'");
+                            await RunPartialNoThrow(outlookIds);
+                        }
+                    }
+                }
+
+                _failedEntityTracker.CleanupOldEntities();
+            }
+
+            catch (Exception exc)
+            {
+                s_logger.Error($"Error during failed entity retry for target {_data.Name}", exc);
+            }
+        }
+
+        private IOutlookId CreateOutlookId(string entryId, string entityType)
+        {
+            if (entityType == "Event")
+            {
+               return new AppointmentId(new CalDavSynchronizer.Implementation.Events.AppointmentId(entryId, null),
+                   DateTime.UtcNow,
+                   false);
+            }
+            
+            throw new ArgumentException($"Unknown entity type: {entityType}");
         }
 
         public void UpdateSettings(SyncTargetInfo info, string userEmail, string userCommonName)
@@ -91,7 +147,7 @@ namespace Y360OutlookConnector.Synchronization
             }
 
             var synchronizer = isActive
-                ? _synchronizerFactory.CreateSynchronizer(info, userEmail, userCommonName)
+                ? _synchronizerFactory.CreateSynchronizer(info, userEmail, userCommonName, _failedEntityTracker)
                 : null;
 
             _data = new ConfigData(
@@ -255,7 +311,7 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        private async Task RunPartialNoThrow(IOutlookId[] itemsToSync)
+        public async Task RunPartialNoThrow(IOutlookId[] itemsToSync)
         {
             try
             {

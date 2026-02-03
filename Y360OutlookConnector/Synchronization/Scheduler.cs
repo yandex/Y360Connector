@@ -114,6 +114,13 @@ namespace Y360OutlookConnector.Synchronization
             _runnersById = new Dictionary<Guid, SyncTargetRunner>();
         }
 
+        public SyncTargetRunner GetSyncTargetRunner(Guid profileId)
+        {
+            if (_runnersById.TryGetValue(profileId, out var runner))
+                return runner;
+            return null;
+        }
+
         public async Task<bool> RunSynchronization(bool wasManuallyTriggered, bool noDateConstraint, Dictionary<Guid,string> ctags)
         {
             bool result = false;

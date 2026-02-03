@@ -3,15 +3,19 @@ using CalDavSynchronizer.Utilities;
 using log4net;
 using log4net.Appender;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Media.Imaging;
 using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Synchronization;
 using Y360OutlookConnector.Utilities;
+using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector.Ui
 {
@@ -62,6 +66,8 @@ namespace Y360OutlookConnector.Ui
             {
                 s_instance.Activate();
             }
+
+            DumpAllOutlookFolders();
         }
 
         private void SettingsWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -115,10 +121,15 @@ namespace Y360OutlookConnector.Ui
 
         #region General settings
 
+        private bool _isInitializingGeneralOptions;
+
         private void SetGeneralOption(GeneralOptions options)
         {
+            _isInitializingGeneralOptions = true;
             IncludeDebugLevelInfoCheckbox.IsChecked = options.UseDebugLevelLogging;
             UseExternalBrowserForLoginCheckbox.IsChecked = options.IsExternalBrowserUsedInLogin;
+            FormatFileAsLastNameFirstCheckbox.IsChecked = options.FormatFileAsLastNameFirst;
+            _isInitializingGeneralOptions = false;
         }
 
         private void IncludeDebugLevelInfoCheckbox_Changed(object sender, RoutedEventArgs e)
@@ -148,6 +159,309 @@ namespace Y360OutlookConnector.Ui
                 var options = provider.Options.Clone();
                 options.IsExternalBrowserUsedInLogin = useExternalBrowserForLogin;
                 provider.Options = options;
+            }
+        }
+
+        private void FormatFileAsLastNameFirstCheckbox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializingGeneralOptions)
+            {
+                s_logger.Info($"FormatFileAsLastNameFirstCheckbox_Changed: ignored because _isInitializingGeneralOptions is true");
+                return;
+            }
+
+            var provider = ThisAddIn.Components?.GeneralOptionsProvider;
+            var formatFileAsLastNameFirst = FormatFileAsLastNameFirstCheckbox.IsChecked ?? false;
+
+            s_logger.Info($"FormatFileAsLastNameFirstCheckbox_Changed: handler entered, formatFileAsLastNameFirst={formatFileAsLastNameFirst}");
+
+            if (provider != null)
+            {
+                var options = provider.Options.Clone();
+                options.FormatFileAsLastNameFirst = formatFileAsLastNameFirst;
+                provider.Options = options;
+
+                if (formatFileAsLastNameFirst)
+                {
+                    s_logger.Info($"FormatFileAsLastNameFirstCheckbox_Changed: calling UpdateAllContactsFullName(true)");
+                    UpdateAllContactsFullName(true);
+                }
+                else
+                {
+                    var syncManager = ThisAddIn.Components?.SyncManager;
+                    if (syncManager != null)
+                    {
+                        s_logger.Info($"FormatFileAsLastNameFirstCheckbox_Changed: calling RestoreContactsFromServerAsync()");
+                        _ = syncManager.RestoreContactsFromServerAsync();
+                    }
+                }
+            }
+        }
+
+        internal static void UpdateAllContactsFullName(bool formatAsLastNameFirst)
+        {
+            try
+            {
+                s_logger.Info($"UpdateAllContactsFullName: entered, formatAsLastNameFirst={formatAsLastNameFirst}");
+                var session = ThisAddIn.Components?.OutlookApplication?.Session;
+                if (session == null)
+                {
+                    s_logger.Warn("UpdateAllContactsFullName: Outlook session is null, aborting");
+                    return;
+                }
+
+                Outlook.Stores stores = null;
+                try
+                {
+                    stores = session.Stores;
+                    if (stores == null)
+                    {
+                        s_logger.Warn("UpdateAllContactsFullName: Outlook stores is null, aborting");
+                        return;
+                    }
+
+                    for (int i = 1; i <= stores.Count; i++)
+                    {
+                        Outlook.Store store = null;
+                        Outlook.Folder rootFolder = null;
+                        try
+                        {
+                            var storeItem = stores[i];
+                            store = storeItem as Outlook.Store;
+                            if (store == null)
+                            {
+                                Marshal.ReleaseComObject(storeItem);
+                                continue;
+                            }
+
+                            rootFolder = store.GetRootFolder() as Outlook.Folder;
+                            if (rootFolder == null)
+                            {
+                                s_logger.Debug($"UpdateAllContactsFullName: store '{store.DisplayName}' has null root folder, skipping");
+                                Marshal.ReleaseComObject(store);
+                                store = null;
+                                continue;
+                            }
+
+                            s_logger.Info(
+                                $"UpdateAllContactsFullName: scanning store '{store.DisplayName}', root folder '{rootFolder.Name}', " +
+                                $"EntryID='{rootFolder.EntryID}', StoreID='{rootFolder.StoreID}'");
+
+                            UpdateContactsInSubfolders(rootFolder, formatAsLastNameFirst);
+
+                            Marshal.ReleaseComObject(rootFolder);
+                            rootFolder = null;
+                        }
+                        catch (Exception exStore)
+                        {
+                            s_logger.Error($"UpdateAllContactsFullName: error while processing store '{store?.DisplayName ?? "unknown"}'", exStore);
+                        }
+                        finally
+                        {
+                            if (rootFolder != null)
+                            {
+                                Marshal.ReleaseComObject(rootFolder);
+                            }
+                            if (store != null)
+                            {
+                                Marshal.ReleaseComObject(store);
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    if (stores != null)
+                    {
+                        Marshal.ReleaseComObject(stores);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error("Failed to update contacts FullName", ex);
+            }
+        }
+
+        internal static void UpdateContactsInFolder(Outlook.Folder folder, bool formatAsLastNameFirst)
+        {
+            if (folder == null)
+            {
+                return;
+            }
+
+            if (!formatAsLastNameFirst)
+            {
+                s_logger.Debug($"UpdateContactsInFolder: formatAsLastNameFirst is false, skipping folder '{folder.Name}'");
+                return;
+            }
+
+            try
+            {
+                var items = folder.Items;
+                if (items == null)
+                {
+                    return;
+                }
+
+                s_logger.Debug($"UpdateContactsInFolders: checking folder '{folder.Name}', EntryID='{folder.EntryID}', StoreID='{folder.StoreID}', ItemsCount='{items.Count}'");
+
+                for (int i = 1; i <= items.Count; i++)
+                {
+                    Outlook.ContactItem contact = null;
+                    try
+                    {
+                        var item = items[i];
+                        contact = item as Outlook.ContactItem;
+                        if (contact == null)
+                        {
+                            Marshal.ReleaseComObject(item);
+                            continue;
+                        }
+
+                        var firstName = contact.FirstName ?? String.Empty;
+                        var middleName = contact.MiddleName ?? String.Empty;
+                        var lastName = contact.LastName ?? String.Empty;
+
+                        var parts = new List<string>();
+                        if (formatAsLastNameFirst)
+                        {
+                            if (!String.IsNullOrEmpty(lastName))
+                            {
+                                parts.Add(lastName);
+                            }
+                            if (!String.IsNullOrEmpty(firstName))
+                            {
+                                parts.Add(firstName);
+                            }
+                            if (!String.IsNullOrEmpty(middleName))
+                            {
+                                parts.Add(middleName);
+                            }
+
+                            if (parts.Count > 0)
+                            {
+                                var formattedName = String.Join(" ", parts);
+                                bool changed = false;
+
+                                if (!String.Equals(contact.FirstName ?? String.Empty, formattedName, StringComparison.Ordinal))
+                                {
+                                    contact.FirstName = formattedName;
+                                    changed = true;
+                                }
+                                if (!String.IsNullOrEmpty(contact.MiddleName) || !String.IsNullOrEmpty(contact.LastName))
+                                {
+                                    contact.MiddleName = String.Empty;
+                                    contact.LastName = String.Empty;
+                                    changed = true;
+                                }
+
+                                if (changed)
+                                {
+                                    try 
+                                    {
+                                        contact.Save();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        s_logger.Warn($"Failed to save contact in folder '{folder.Name}'", ex);
+                                    }
+                                }
+                            }
+                        }  
+                    }
+                    finally
+                    {
+                        if (contact != null)
+                        {
+                            Marshal.ReleaseComObject(contact);
+                        }
+                    }
+                }
+
+                Marshal.ReleaseComObject(items);
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error("Failed to update contacts full names", ex);
+            }
+        }
+
+        internal static void UpdateContactsInSubfolders(Outlook.Folder parentFolder, bool formatAsLastNameFirst)
+        {
+            if (parentFolder == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var subfolders = parentFolder.Folders;
+                if (subfolders == null)
+                {
+                    return;
+                }
+
+                for (int i = 1; i <= subfolders.Count; i++)
+                {
+                    Outlook.Folder subfolder = null;
+                    try
+                    {
+                        var folderItem = subfolders[i];
+                        subfolder = folderItem as Outlook.Folder;
+                        if (subfolder == null)
+                        {
+                            Marshal.ReleaseComObject(folderItem);
+                            continue;
+                        }
+
+                        s_logger.Debug($"UpdateContactsInSubfolders: checking folder '{subfolder.Name}', EntryID='{subfolder.EntryID}', StoreID='{subfolder.StoreID}', DefaultItemType='{subfolder.DefaultItemType}'");
+
+                        bool isTargetedFolder = false;
+                        var syncManager = ThisAddIn.Components?.SyncManager;
+                        if (subfolder.DefaultItemType == Outlook.OlItemType.olContactItem)
+                        {
+                            if (syncManager != null)
+                            {
+                                isTargetedFolder = syncManager.IsSharedOrExternalContactsFolder(subfolder.EntryID, subfolder.StoreID);
+                            }
+                            else
+                            {
+                                s_logger.Debug("UpdateContactsInSubfolders: SyncManager is null, cannot determine if folder is targeted");
+                            }
+                        }
+
+                        s_logger.Debug($"UpdateContactsInSubfolders: isTargetedFolder={isTargetedFolder} for '{subfolder.Name}'");
+
+                        if (isTargetedFolder)
+                        {
+                            s_logger.Info($"UpdateContactsInSubfolders: Updating contacts full names in folder '{subfolder.Name}'");
+                            UpdateContactsInFolder(subfolder, formatAsLastNameFirst);
+                        }
+
+                        UpdateContactsInSubfolders(subfolder, formatAsLastNameFirst);
+
+                        Marshal.ReleaseComObject(subfolder);
+                        subfolder = null;
+                    }
+                    catch (Exception ex)
+                    {
+                        s_logger.Error($"UpdateContactsInSubfolders: error while processing subfolder {subfolder?.Name ?? "unknown"}", ex);
+                    }
+                    finally
+                    {
+                        if (subfolder != null)
+                        {
+                            Marshal.ReleaseComObject(subfolder);
+                        }
+                    }
+                }
+
+                Marshal.ReleaseComObject(subfolders);
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error($"Failed to update contacts full names in subfolders of {parentFolder.Name}", ex);
             }
         }
 
@@ -411,6 +725,68 @@ namespace Y360OutlookConnector.Ui
                     }
                 });
             });
+        }
+
+        private static void DumpAllOutlookFolders()
+        {
+            try
+            {
+                var app = ThisAddIn.Components?.OutlookApplication;
+                var session = app?.Session;
+                if (session == null)
+                    return;
+
+                foreach (Outlook.Store store in session.Stores)
+                {
+                    try
+                    {
+                        var root = store.GetRootFolder() as Outlook.Folder;
+                        if (root == null)
+                            continue;
+
+                        DumpFolderRecursive(root, store.DisplayName, "");
+                        Marshal.ReleaseComObject(root);
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(store);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error("DumpAllOutlookFolders failed", ex);
+            }
+        }
+
+        private static void DumpFolderRecursive(Outlook.Folder folder, string storeName, string indent)
+        {
+            try
+            {
+                var items = folder.Items;
+                s_logger.Info(
+                    $"{indent}Store='{storeName}', " +
+                    $"Folder='{folder.Name}', " +
+                    $"Path='{folder.FolderPath}', " +
+                    $"DefaultItemType='{folder.DefaultItemType}', " +
+                    $"EntryID='{folder.EntryID}', " +
+                    $"StoreID='{folder.StoreID}', " +
+                    $"Items='{items?.Count ?? 0}'");
+
+                Marshal.ReleaseComObject(items);
+
+                var subfolders = folder.Folders;
+                foreach (Outlook.Folder sub in subfolders)
+                {
+                    DumpFolderRecursive(sub, storeName, indent + "  ");
+                    Marshal.ReleaseComObject(sub);
+                }
+                Marshal.ReleaseComObject(subfolders);
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error($"DumpFolderRecursive failed for '{folder.Name}'", ex);
+            }
         }
     }
 }

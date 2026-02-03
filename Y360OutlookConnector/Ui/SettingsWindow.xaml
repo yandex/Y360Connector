@@ -72,7 +72,9 @@
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition/>
-                <RowDefinition />
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Grid.ColumnSpan="2" 
                    Padding="0,4,8,6" FontWeight="Bold" 
@@ -80,6 +82,13 @@
             <CheckBox Grid.Row="1" Margin="0,8,0,8" x:Name="UseExternalBrowserForLoginCheckbox" 
                       Checked="UseExternalBrowserForLoginCheckbox_Changed" Unchecked="UseExternalBrowserForLoginCheckbox_Changed"
                       Content="{x:Static l10n:Strings.SettingsWindow_UseExternalBrowserForLogin}" />
+            <Label Grid.Row="2" Grid.ColumnSpan="2" 
+                   Padding="0,4,8,6" FontWeight="Bold" 
+                   Content="{x:Static l10n:Strings.SettingsWindow_ContactSyncPanelTitle}" />
+            <CheckBox Grid.Row="3" Margin="0,8,0,8" x:Name="FormatFileAsLastNameFirstCheckbox"
+                      IsThreeState="False"
+                      Checked="FormatFileAsLastNameFirstCheckbox_Changed" Unchecked="FormatFileAsLastNameFirstCheckbox_Changed"
+                      Content="{x:Static l10n:Strings.SettingsWindow_FormatFileAsLastNameFirst}" />
         </Grid>
 
         <Separator Margin="0,18" BorderBrush="#d9d9d9" BorderThickness="1" />

@@ -11,23 +11,6 @@ namespace Y360OutlookConnector.Ui.WebView
     using IDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
     using ConnectionPointCookie = System.Windows.Forms.AxHost.ConnectionPointCookie;
 
-    public class WebViewDocumentCompletedEventArgs : EventArgs
-    {
-        public Uri Url;
-    }
-
-    public class WebViewNavigateErrorEventArgs : EventArgs
-    {
-        public string Url;
-        public int StatusCode;
-    }
-
-    public class WebViewNavigatingEventArgs : EventArgs
-    {
-        public Uri Url;
-        public bool Cancel;
-    }
-
     /// <summary>
     /// Interaction logic for WebView.xaml
     /// </summary>

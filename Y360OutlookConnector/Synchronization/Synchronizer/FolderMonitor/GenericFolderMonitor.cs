@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -35,6 +35,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.FolderMonitor
                         break;
                     case Outlook.ContactItem contact:
                         s_logger.Debug($"'{nameof(ItemAction)}.{action}': Contact '{contact.LastNameAndFirstName}' '{contact.EntryID}' ");
+                        s_logger.Debug($"Contact details: First='{contact.FirstName}', Middle='{contact.MiddleName}', Last='{contact.LastName}', Title='{contact.Title}', FileAs='{contact.FileAs}'");
                         entryId = new GenericId(contact.EntryID, contact.LastModificationTime.ToUniversalTime(), wasDeleted);
                         break;
                 }

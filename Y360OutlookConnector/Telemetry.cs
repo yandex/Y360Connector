@@ -22,6 +22,7 @@ namespace Y360OutlookConnector
         public const string TelemostApiCalls = "telemost_api_calls";
         public const string TelemostSettingsWindowEvents = "telemost_settings_window";
         public const string ConfirmedBugEvent = "confirmed_bug_event";
+        public const string CalendarEvents = "calendar_events";
 
         public static void Initialize(string dataFolder)
         {
@@ -44,10 +45,9 @@ namespace Y360OutlookConnector
         {
             try
             {
-                var payload = new JObject
-                {
-                    [eventName] = value != null ? JToken.FromObject(value) : JValue.CreateNull()
-                };
+                var payload = new JObject();
+                EnrichWithUserUid(payload);
+                payload[eventName] = value != null ? JToken.FromObject(value) : JValue.CreateNull();
 
 #if !DEBUG
                 YandexMetrica.ReportEvent(eventGroup, JsonConvert.SerializeObject(payload));
@@ -63,10 +63,9 @@ namespace Y360OutlookConnector
         {
             try
             {
-                var payload = new JObject
-                {
-                    [eventName] = new JObject()
-                };
+                var payload = new JObject();
+                EnrichWithUserUid(payload);
+                payload[eventName] = new JObject();
 
 #if !DEBUG
                 YandexMetrica.ReportEvent(eventGroup, JsonConvert.SerializeObject(payload));
@@ -82,10 +81,9 @@ namespace Y360OutlookConnector
         {
             try
             {
-                var payload = new JObject
-                {
-                    [errorType] = error.ToString()
-                };
+                var payload = new JObject();
+                EnrichWithUserUid(payload);
+                payload[errorType] = error.ToString();
 
 #if !DEBUG
                 YandexMetrica.ReportEvent("errors", JsonConvert.SerializeObject(payload));
@@ -94,6 +92,22 @@ namespace Y360OutlookConnector
             catch (System.Exception exc)
             {
                 s_logger.Warn($"Send unhandled exception error:", exc);
+            }
+        }
+
+        private static void EnrichWithUserUid(JObject payload)
+        {
+            try
+            {
+                var userId = ThisAddIn.Components?.LoginController?.UserInfo?.UserId;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    payload["user_id"] = userId;
+                }
+            }
+            catch (System.Exception exc)
+            {
+                s_logger.Warn("EnrichWithUserUd error:", exc);
             }
         }
     }

@@ -230,21 +230,53 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
         public Task<IContactItemWrapper> Map2To1(vCard source, IContactItemWrapper target, IEntitySynchronizationLogger logger, ICardDavRepositoryLogger context)
         {
-            target.Inner.FirstName = source.GivenName;
-            target.Inner.LastName = source.FamilyName;
-            target.Inner.Title = source.NamePrefix;
-            target.Inner.Suffix = source.NameSuffix;
-            target.Inner.MiddleName = source.AdditionalNames;
-            target.Inner.Gender = MapGender1To2(source.Gender);
+            var options = ThisAddIn.Components?.GeneralOptionsProvider?.Options;
+            bool formatLastFirst = options?.FormatFileAsLastNameFirst ?? false;
 
-            target.Inner.AssistantName = source.Assistant;
-            target.Inner.Spouse = source.Spouse;
-            target.Inner.ManagerName = source.Manager;
+            var parent = target.Inner?.Parent as MAPIFolder;
+            bool isTargetedFolder = false;
+            var syncManager = ThisAddIn.Components?.SyncManager;
 
-            if (String.IsNullOrEmpty(target.Inner.FullName))
+            if (parent != null && syncManager != null)
+            {
+                isTargetedFolder = syncManager.IsSharedOrExternalContactsFolder(parent.EntryID, parent.StoreID);
+            }
+
+            var nameParts = new List<string>();
+            if (formatLastFirst)
+            {
+                if (!String.IsNullOrEmpty(source.FamilyName))
+                    nameParts.Add(source.FamilyName);
+                if (!String.IsNullOrEmpty(source.GivenName))
+                    nameParts.Add(source.GivenName);
+                if (!String.IsNullOrEmpty(source.AdditionalNames))
+                    nameParts.Add(source.AdditionalNames);
+            }
+            string computedFullName = String.Join(" ", nameParts);
+            if (!String.IsNullOrEmpty(computedFullName) && formatLastFirst && isTargetedFolder)
+            {
+                target.Inner.FirstName = computedFullName;
+                s_logger.Info($"Setting computedFullName to target.Inner.FullName: {target.Inner.FullName}");
+            }
+            else
+            {
+                target.Inner.FirstName = source.GivenName;
+                target.Inner.LastName = source.FamilyName;
+                target.Inner.Title = source.NamePrefix;
+                target.Inner.Suffix = source.NameSuffix;
+                target.Inner.MiddleName = source.AdditionalNames;
+                target.Inner.Gender = MapGender1To2(source.Gender);
+
+                target.Inner.AssistantName = source.Assistant;
+                target.Inner.Spouse = source.Spouse;
+                target.Inner.ManagerName = source.Manager;
+
                 target.Inner.FullName = source.FormattedName;
-            if (!_configuration.KeepOutlookFileAs)
-                target.Inner.FileAs = source.FormattedName;
+                if (!_configuration.KeepOutlookFileAs)
+                {
+                    target.Inner.FileAs = source.FormattedName;
+                }
+            }
 
             if (source.Nicknames.Count > 0)
             {

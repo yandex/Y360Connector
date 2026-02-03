@@ -219,11 +219,29 @@
   <data name="Messages_UnauthorizedMessageDescription" xml:space="preserve">
     <value>Чтобы запустить синхронизацию, войдите с Яндекс ID</value>
   </data>
+  <data name="Messages_WebView2BusinessHelpText" xml:space="preserve">
+    <value>Справка для бизнеса</value>
+  </data>
+  <data name="Messages_WebView2CustomersHelpText" xml:space="preserve">
+    <value>Справка для пользователей</value>
+  </data>
+  <data name="Messages_WebView2RequiredErrorDescription" xml:space="preserve">
+    <value>Для отображения веб-контента в этом приложении требуется среда выполнения WebView2. Установите WebView2 Runtime, чтобы продолжить использовать все функции приложения.</value>
+  </data>
+  <data name="Messages_WebView2RequiredErrorTitle" xml:space="preserve">
+    <value>Требуется среда выполнения WebView2</value>
+  </data>
   <data name="SettingsWindow_ApplyButton" xml:space="preserve">
     <value>Сохранить изменения</value>
   </data>
   <data name="SettingsWindow_CancelButton" xml:space="preserve">
     <value>Отмена</value>
+  </data>
+  <data name="SettingsWindow_ContactSyncPanelTitle" xml:space="preserve">
+    <value>Синхронизация контактов</value>
+  </data>
+  <data name="SettingsWindow_FormatFileAsLastNameFirst" xml:space="preserve">
+    <value>Форматировать контакты в порядке "Фамилия Имя Отчество"</value>
   </data>
   <data name="SettingsWindow_GeneralSettingsPanelTitle" xml:space="preserve">
     <value>Общие</value>

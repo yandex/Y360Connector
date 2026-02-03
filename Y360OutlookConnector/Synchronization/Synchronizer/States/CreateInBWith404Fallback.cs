@@ -1,8 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using CalDavSynchronizer;
 using CalDavSynchronizer.DataAccess;
 using CalDavSynchronizer.Implementation.ComWrappers;
 using CalDavSynchronizer.Implementation.Events;
@@ -14,6 +16,8 @@ using GenSync.Logging;
 using GenSync.Synchronization;
 using GenSync.Synchronization.States;
 using log4net;
+using Y360OutlookConnector.Utilities;
+
 
 namespace Y360OutlookConnector.Synchronization.Synchronizer.States
 {
@@ -30,6 +34,8 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.States
         private IEventSynchronizationContext _context;
 
         private readonly OutlookEventRepositoryWrapper _outlookRepository;
+        private readonly IOutlookSession _outlookSession;
+        private readonly string _outlookEmailAddress;
         private readonly CreateInB<AppointmentId, DateTime, IAppointmentItemWrapper, WebResourceName, string,
             IICalendar, IEventSynchronizationContext> _inner;
 
@@ -37,10 +43,13 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.States
             OutlookEventRepositoryWrapper outlookEventRepository,
             EntitySyncStateEnvironment<AppointmentId, DateTime, IAppointmentItemWrapper, WebResourceName, string,
                 IICalendar, IEventSynchronizationContext> environment,
-            AppointmentId aId, DateTime aVersion)
+            AppointmentId aId, DateTime aVersion, IOutlookSession outlookSession,
+            string outlookEmailAddress)
             : base(environment)
         {
             _outlookRepository = outlookEventRepository;
+            _outlookSession = outlookSession ?? throw new ArgumentNullException(nameof(outlookSession));
+            _outlookEmailAddress = outlookEmailAddress ?? throw new ArgumentNullException(nameof(outlookEmailAddress));
 
             _inner = new CreateInB<AppointmentId, DateTime, IAppointmentItemWrapper, WebResourceName,
                 string, IICalendar, IEventSynchronizationContext>(environment, aId, aVersion);
@@ -149,6 +158,15 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.States
             if (exception is WebDavClientException webDavClientException
                 && webDavClientException.StatusCode == HttpStatusCode.NotFound)
             {
+                bool isOrganizer = IsUserOrganizer();
+
+                if (!isOrganizer)
+                {
+                    s_logger.Info($"Received 404 error when trying to create an event, but the user is not the organizer. The event {AId} will be kept in Outlook.");
+                    stateContext.SetState(Discard());
+                    return;
+                }
+
                 s_logger.Info("Received 404 error when trying to create an event. The event will be deleted from Outlook");
                 _outlookRepository.TryDelete(AId, AVersion, _context, logger);
                 stateContext.SetState(Discard());
@@ -215,6 +233,35 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.States
             public void NotifyOperationFailed(string errorMessage)
             {
                 _state.NotifyOperationFailed(_stateContext, errorMessage, _logger);
+            }
+        }
+
+        private bool IsUserOrganizer()
+        {
+            Microsoft.Office.Interop.Outlook.AppointmentItem appointment = null;
+            try
+            {
+                appointment = _outlookSession.GetAppointmentItem(AId.EntryId);
+                var organizerEmail = appointment.GetOrganizerEmailAddress(NullEntitySynchronizationLogger.Instance);
+
+                if (string.IsNullOrEmpty(organizerEmail))
+                {
+                    return false;
+                }
+
+                return EmailAddress.AreSame(organizerEmail, _outlookEmailAddress);
+            }
+            catch (Exception ex)
+            {
+                s_logger.Warn($"Failed to check organizer in 404 handler", ex);
+                return false;
+            }
+            finally
+            {
+                if (appointment != null)
+                {
+                    Marshal.ReleaseComObject(appointment);
+                }
             }
         }
     }

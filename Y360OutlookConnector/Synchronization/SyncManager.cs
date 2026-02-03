@@ -11,6 +11,10 @@ using Y360OutlookConnector.Configuration;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Y360OutlookConnector.Clients;
 using System.Linq;
+using CalDavSynchronizer.ChangeWatching;
+using CalDavSynchronizer.Implementation.Events;
+using CalDavSynchronizer.Utilities;
+using System.Windows.Controls;
 
 namespace Y360OutlookConnector.Synchronization
 {
@@ -28,14 +32,17 @@ namespace Y360OutlookConnector.Synchronization
         private readonly SyncConfigController _syncConfig;
         private readonly System.Windows.Forms.Timer _timer;
         private readonly InvitesInfoStorage _invitesInfo;
+        private readonly IUserEmailService _userEmailService;
 
         private Task<List<SyncTargetInfo>> _syncTargetsTask;
         private DateTime _syncStartTime;
         private List<SyncTargetInfo> _cachedSyncTargets;
-        private Dictionary<Guid,string> _ctags;
+        private Dictionary<Guid, string> _ctags;
+
 
         public string UserEmail { get; private set; }
         public SyncStatus Status { get; set; }
+        public IUserEmailService UserEmailService => _userEmailService;
 
         /// <summary>
         /// Запрет или разрешение на выполнение синхронизации по таймеру
@@ -49,8 +56,9 @@ namespace Y360OutlookConnector.Synchronization
             _httpClientFactory = httpClientFactory;
             _dataFolderPath = dataFolderPath;
 
-            _ctags = new Dictionary<Guid,string>();
+            _ctags = new Dictionary<Guid, string>();
             Status = new SyncStatus();
+
 
             _scheduler = new Scheduler(application.Session, httpClientFactory, dataFolderPath, Status, invitesInfo);
 
@@ -59,6 +67,8 @@ namespace Y360OutlookConnector.Synchronization
             _invitesInfo = invitesInfo;
             _loginController = loginController;
             _loginController.LoginStateChanged += LoginController_LoginStateChanged;
+
+            _userEmailService = new UserEmailService(httpClientFactory.CreateHttpClient());
 
             _timer = new System.Windows.Forms.Timer();
             _timer.Tick += Timer_Tick;
@@ -72,15 +82,23 @@ namespace Y360OutlookConnector.Synchronization
         {
             if (_loginController.IsUserLoggedIn)
             {
+
+                s_logger.Info("User is logged in, fetching user emails");
+                _ = FetchUserEmailsAsync();
+
                 if (AppConfig.IsAutoSyncEnabled)
                 {
-                    _timer.Interval = (int) TimeSpan.FromSeconds(5).TotalMilliseconds;
+                    _timer.Interval = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
                     _timer.Start();
                 }
                 else
                 {
                     s_logger.Warn("Auto-sync is disabled");
                 }
+            }
+            else
+            {
+                s_logger.Info("User is not logged in");
             }
         }
 
@@ -96,9 +114,9 @@ namespace Y360OutlookConnector.Synchronization
             {
                 await RunSynchronization();
             }
-            ThisAddIn.UiContext.Post(x => 
+            ThisAddIn.UiContext.Post(x =>
             {
-                _timer.Interval = (int) TimeSpan.FromMinutes(1).TotalMilliseconds;
+                _timer.Interval = (int)TimeSpan.FromMinutes(1).TotalMilliseconds;
                 _timer.Start();
             },
             null);
@@ -112,7 +130,7 @@ namespace Y360OutlookConnector.Synchronization
 
         private void OnProxyOptionsChanged(object sender, EventArgs e)
         {
-            if (Status.CriticalError == CriticalError.ProxyAuthFailure 
+            if (Status.CriticalError == CriticalError.ProxyAuthFailure
                 || Status.CriticalError == CriticalError.ProxyConnectFailure)
             {
                 Ui.ErrorWindow.HideError(Ui.ErrorWindow.ErrorType.ProxyError);
@@ -181,7 +199,7 @@ namespace Y360OutlookConnector.Synchronization
 
         public SyncTargetConfig GetSyncTargetConfig(string outlookFolderId, SyncTargetType targetType = SyncTargetType.Calendar)
         {
-            return _cachedSyncTargets?.FirstOrDefault(s => s.TargetType == targetType && 
+            return _cachedSyncTargets?.FirstOrDefault(s => s.TargetType == targetType &&
                                                       s.Config.Active && s.Config.OutlookFolderEntryId == outlookFolderId)?.Config;
         }
 
@@ -205,6 +223,8 @@ namespace Y360OutlookConnector.Synchronization
                 ThisAddIn.RestoreUiContext();
                 await UpdateSyncTargetsAsync(manuallyTriggered);
                 isBlankShot = await _scheduler.RunSynchronization(manuallyTriggered, noDateConstraint, _ctags) == false;
+
+                await RetryFailedEntities();
             }
             catch (Exception exc)
             {
@@ -259,8 +279,13 @@ namespace Y360OutlookConnector.Synchronization
 
         private void LoginController_LoginStateChanged(object sender, LoginStateEventArgs e)
         {
+            s_logger.Info($"LoginController_LoginStateChanged called: IsUserLoggedIn = {e.IsUserLoggedIn}");
+
             if (e.IsUserLoggedIn)
             {
+                s_logger.Info("User logged in, fetching user emails");
+                _ = FetchUserEmailsAsync();
+
                 if (AppConfig.IsAutoSyncEnabled)
                 {
                     s_logger.Info("Sync triggered by user log-in");
@@ -273,9 +298,44 @@ namespace Y360OutlookConnector.Synchronization
             }
             else
             {
+                s_logger.Info("User logged out, clearing email cache");
                 _timer.Stop();
                 _scheduler.ClearSettings();
                 Status.Reset();
+
+                _userEmailService.ClearCache();
+            }
+        }
+
+        private async Task FetchUserEmailsAsync()
+        {
+            try
+            {
+                s_logger.Info("FetchUserEmailsAsync called");
+
+                if (!_loginController.IsUserLoggedIn)
+                {
+                    s_logger.Warn("User is not logged in, skipping email fetch");
+                    return;
+                }
+
+                s_logger.Info("User is logged in, proceeding with email fetch");
+
+                if (_loginController.UserInfo?.AccessToken == null)
+                {
+                    s_logger.Error("Access token is null, cannot fetch user emails");
+                    return;
+                }
+
+                var accessToken = SecureStringUtility.ToUnsecureString(_loginController.UserInfo.AccessToken);
+                s_logger.Info($"Access token retrieved, length: {accessToken?.Length ?? 0}");
+
+                await _userEmailService.GetUserEmailsAsync(accessToken);
+                s_logger.Info("Successfully fetched user emails");
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error($"Failed to fetch user emails: {ex.Message}", ex);
             }
         }
 
@@ -325,7 +385,7 @@ namespace Y360OutlookConnector.Synchronization
                     SyncErrorHandler.HandleException(exc, !manuallyTriggered);
                 }
                 return _cachedSyncTargets;
-            }, 
+            },
             TaskScheduler.FromCurrentSynchronizationContext());
 
             await _syncTargetsTask;
@@ -375,7 +435,7 @@ namespace Y360OutlookConnector.Synchronization
             var calDavDataProvider = new CalDavResourcesDataAccess(new Uri(CalDavUrl), webDavClient);
             var resources = await calDavDataProvider.GetResources();
 
-            var ctags = new Dictionary<Guid,string>();
+            var ctags = new Dictionary<Guid, string>();
 
             var items = new List<SyncTargetInfo>();
             int calendarsCounter = 0;
@@ -484,6 +544,125 @@ namespace Y360OutlookConnector.Synchronization
                 default:
                     return name;
             }
+        }
+
+        private async Task RetryFailedEntities()
+        {
+            try
+            {
+                var syncTargets = await GetSyncTargets();
+                var activeSyncTargets = syncTargets.Where(s => s.Config.Active).ToList();
+
+                foreach(var syncTarget in activeSyncTargets)
+                {
+                    var targetRunner = _scheduler.GetSyncTargetRunner(syncTarget.Id);
+                    if (targetRunner != null)
+                    {
+                        await targetRunner.RetryFailedEntities();
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                s_logger.Error("Error during failed entity retry", exc);
+            }
+        }
+
+        private void ClearEntityCache(Guid targetId)
+        {
+            var folderPath = Path.Combine(_dataFolderPath, targetId.ToString());
+            var filePath = Path.Combine(folderPath, "relations.xml");
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    s_logger.Info($"Removing file {filePath}");
+                    File.Delete(filePath);
+                }
+                if (Directory.Exists(folderPath))
+                {
+                    s_logger.Info($"Removing folder {folderPath}");
+                    Directory.Delete(folderPath);
+                }
+            }
+            catch (Exception exc)
+            {
+                s_logger.Warn($"Failed to remove entities cache for profile {targetId}", exc);
+            }
+        }
+
+        public async Task RestoreContactsFromServerAsync()
+        {
+            try
+            {
+                var syncTargets = await GetSyncTargets();
+                if (syncTargets == null)
+                {
+                    return;
+                }
+
+                s_logger.Info($"RestoreContactsFromServerAsync: total sync targets='{syncTargets.Count}'");
+
+                var sharedName = Localization.Strings.SyncConfigWindow_SharedContactsName;
+                var externalName = Localization.Strings.SyncConfigWindow_ExternalContactsName;
+
+                var contactTargets = syncTargets.Where(s => s.TargetType == SyncTargetType.Contacts &&
+                                                          s.Config.Active &&
+                                                          (s.Name == sharedName || s.Name == externalName)).ToList();
+
+                foreach (var syncTarget in contactTargets)
+                {
+                    s_logger.Info($"RestoreContactsFromServerAsync: Clearing cache for target Id='{syncTarget.Id}', Name='{syncTarget.Name}'");
+                    ClearEntityCache(syncTarget.Id);
+                }
+
+                await RunSynchronization(manuallyTriggered: true, noDateConstraint: true);
+            }
+            catch (Exception exc)
+            {
+                s_logger.Error("Error during contacts restoration", exc);
+            }
+        }
+
+        private IEnumerable<SyncTargetInfo> GetSharedOrExternalContactsTargets()
+        {
+            if (_cachedSyncTargets == null)
+            {
+                return Enumerable.Empty<SyncTargetInfo>();
+            }
+
+            var sharedName = Localization.Strings.SyncConfigWindow_SharedContactsName;
+            var externalName = Localization.Strings.SyncConfigWindow_ExternalContactsName;
+
+            return _cachedSyncTargets.Where(target =>
+                target.TargetType == SyncTargetType.Contacts &&
+                (String.Equals(target.Name, sharedName, StringComparison.OrdinalIgnoreCase) ||
+                 String.Equals(target.Name, externalName, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        public bool IsSharedOrExternalContactsFolder(string outlookFolderEntryId, string outlookFolderStoreId)
+        {
+            if (String.IsNullOrEmpty(outlookFolderEntryId) || String.IsNullOrEmpty(outlookFolderStoreId))
+            {
+                return false;
+            }
+
+            s_logger.Debug($"IsSharedOrExternalContactsFolder: folder EntryId='{outlookFolderEntryId}', StoreId='{outlookFolderStoreId}'");
+
+            foreach (var target in GetSharedOrExternalContactsTargets())
+            {
+                s_logger.Debug($"Checking target: Id='{target.Id}', Name='{target.Name}', EntryId='{target.Config.OutlookFolderEntryId}', StoreId='{target.Config.OutlookFolderStoreId}'");
+
+                if (target.Config.OutlookFolderEntryId == outlookFolderEntryId &&
+                    target.Config.OutlookFolderStoreId == outlookFolderStoreId)
+                {
+                    s_logger.Debug("IsSharedOrExternalContactsFolder: match found");
+                    return true;
+                }
+            }
+
+            s_logger.Debug("IsSharedOrExternalContactsFolder: no match found");
+            return false;
         }
     }
 }

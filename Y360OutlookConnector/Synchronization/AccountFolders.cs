@@ -124,7 +124,7 @@ namespace Y360OutlookConnector.Synchronization
                     s_logger.Error($"Failed to retrieve delivery store for account {account.UserName}", exc);
                 }
 
-                if (EmailAddress.AreSame(userEmail, account.SmtpAddress, EmailAddress.KnownDomainsAliases))
+                if (EmailAddress.AreSame(userEmail, account.SmtpAddress))
                 {
                     Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "suitable_account_found");
                     return account;

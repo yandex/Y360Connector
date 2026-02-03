@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using log4net;
+using Y360OutlookConnector.Synchronization;
 
 namespace Y360OutlookConnector.Utilities
 {
@@ -13,14 +14,12 @@ namespace Y360OutlookConnector.Utilities
 
         public string Domain { get; set; } = String.Empty;
 
-        public static string[] KnownDomainsAliases =
+        private static IUserEmailService _userEmailService;
+
+        public static void SetUserEmailService(IUserEmailService userEmailService)
         {
-            "ya.ru",
-            "yandex.by",
-            "yandex.com",
-            "yandex.kz",
-            "yandex.ru"
-        };
+            _userEmailService = userEmailService;
+        }
 
         public override string ToString()
         {
@@ -53,36 +52,39 @@ namespace Y360OutlookConnector.Utilities
 
         public static bool AreSame(EmailAddress email1, EmailAddress email2)
         {
+            if (email1 == null || email2 == null)
+            {
+                return false;
+            }
+
+            if (_userEmailService != null)
+            {
+                try
+                {
+                    return _userEmailService.AreEmailsSame(email1.ToString(), email2.ToString());
+                }
+                catch (Exception ex)
+                {
+                    s_logger.Error("Fail to compare emails via UserEmailService", ex);
+                }
+            }
+
             return String.Equals(email1.NameId, email2.NameId, StringComparison.OrdinalIgnoreCase)
                    && String.Equals(email1.Domain, email2.Domain, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static bool AreSame(string str1, string str2, IEnumerable<string> domainAliases = null)
+        public static bool AreSame(string str1, string str2, IEnumerable<IEnumerable<string>> domainAliases = null)
         {
-            var email1 = Parse(str1).Normalize();
-            var email2 = Parse(str2).Normalize();
-
-            if (AreSame(email1, email2))
-                return true;
-
-            if (domainAliases != null)
+            if (String.IsNullOrEmpty(str1) || String.IsNullOrEmpty(str2))
             {
-                var aliasesSet = new HashSet<string>(domainAliases, StringComparer.InvariantCultureIgnoreCase);
-                if (aliasesSet.Contains(email1.Domain))
-                {
-                    foreach (var domain in aliasesSet)
-                    {
-                        var aliasedEmail = new EmailAddress { NameId = email2.NameId, Domain = domain};
-                        if (AreSame(email1, aliasedEmail))
-                            return true;
-                    }
-                }
+                return false;
             }
 
-            return false;
+            //Для обратной совместимости игнорируем параметр алиасов и используем новый сервис
+            return AreSame(Parse(str1), Parse(str2));
         }
 
-        public static bool AreSame(Uri uri1, Uri uri2, IEnumerable<string> domainAliases = null)
+        public static bool AreSame(Uri uri1, Uri uri2, IEnumerable<IEnumerable<string>> domainAliases = null)
         {
             try
             {
@@ -94,7 +96,7 @@ namespace Y360OutlookConnector.Utilities
 
                 int prefixLength = Uri.UriSchemeMailto.Length + 1; // "mailto" + ":"
                 return AreSame(uri1.ToString().Substring(prefixLength),
-                    uri2.ToString().Substring(prefixLength), domainAliases);
+                    uri2.ToString().Substring(prefixLength));
             }
             catch(Exception ex)
             {

@@ -56,6 +56,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         private readonly ITimeZoneCache _timeZoneCache;
         private readonly IOutlookTimeZones _outlookTimeZones;
         private readonly ICalendarResourceResolver _calendarResourceResolver;
+        private readonly FailedEntityTracker _failedEntityTracker;
 
         public EventEntityMapper(
             string outlookEmailAddress,
@@ -67,7 +68,8 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             EventMappingConfiguration configuration,
             ITimeZone configuredEventTimeZoneOrNull,
             IOutlookTimeZones outlookTimeZones,
-            ICalendarResourceResolver calendarResourceResolver)
+            ICalendarResourceResolver calendarResourceResolver,
+            FailedEntityTracker failedEntityTracker)
         {
             _calendarResourceResolver = calendarResourceResolver ?? throw new ArgumentNullException(nameof(calendarResourceResolver));
             _outlookEmailAddress = outlookEmailAddress;
@@ -79,8 +81,9 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             _timeZoneCache = timeZoneCache;
             _serverUserCommonName = serverUserCommonName;
 
-            string outlookMajorVersionString = outlookApplicationVersion.Split(new char[] {'.'})[0];
+            string outlookMajorVersionString = outlookApplicationVersion.Split(new char[] { '.' })[0];
             _outlookMajorVersion = Convert.ToInt32(outlookMajorVersionString);
+            _failedEntityTracker = failedEntityTracker;
         }
 
         public static EventEntityMapper Create(
@@ -93,11 +96,12 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             EventMappingConfiguration configuration,
             ITimeZone configuredEventTimeZoneOrNull,
             IOutlookTimeZones outlookTimeZones,
-            ICalendarResourceResolver calendarResourceResolver)
+            ICalendarResourceResolver calendarResourceResolver,
+            FailedEntityTracker failedEntityTracker)
         {
             return new EventEntityMapper(outlookEmailAddress, serverEmailAddress, serverUserCommonName,
                 localTimeZoneId, outlookApplicationVersion, timeZoneCache, configuration,
-                configuredEventTimeZoneOrNull, outlookTimeZones, calendarResourceResolver);
+                configuredEventTimeZoneOrNull, outlookTimeZones, calendarResourceResolver, failedEntityTracker);
         }
 
         public async Task<IICalendar> Map1To2(IAppointmentItemWrapper sourceWrapper, IICalendar existingTargetCalender, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
@@ -108,7 +112,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             {
                 var organizerEmail = sourceWrapper.Inner.GetOrganizerEmailAddress(logger);
 
-                if (EmailAddress.AreSame(organizerEmail, _outlookEmailAddress, EmailAddress.KnownDomainsAliases))
+                if (EmailAddress.AreSame(organizerEmail, _outlookEmailAddress))
                 {
                     // Это создание новой встречи. Организатором является сам пользователь.
                     // Событие отсутствует в календаре, но присутствует в Outlook и это новое событие
@@ -1001,8 +1005,20 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                             }
                             catch (COMException ex)
                             {
-                                s_logger.Warn("Can't get AppointmentItem of Exception, ignoring!", ex);
-                                logger.LogWarning("Can't get AppointmentItem of Exception, ignoring!", ex);
+                                s_logger.Warn("Can't get AppointmentItem of Exception, scheduling it to sync later!", ex);
+                                logger.LogWarning("Can't get AppointmentItem of Exception, scheduling it to sync later!", ex);
+
+                                var entityId = source.EntryID;
+                                if (!string.IsNullOrEmpty(entityId))
+                                {
+                                    _failedEntityTracker.AddFailedEntity(entityId, "Event", ex);
+                                }
+                                else
+                                {
+                                    s_logger.Warn("Can't get EntryID of AppointmentItem, can't schedule it to sync later!");
+                                    logger.LogWarning("Can't get EntryID of AppointmentItem, can't schedule it to sync later!");
+                                }
+                                throw;
                             }
                             catch (ArgumentException x)
                             {
@@ -1585,7 +1601,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
         private bool IsOwnIdentity(string mailAddress)
         {
-            return EmailAddress.AreSame(mailAddress, _outlookEmailAddress, EmailAddress.KnownDomainsAliases);
+            return EmailAddress.AreSame(mailAddress, _outlookEmailAddress);
         }
 
         public string MapAttendeeType1To2(OlMeetingRecipientType recipientType)
@@ -1924,13 +1940,27 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 else if (ownSourceAttendee != null && targetWrapper.Inner.ResponseStatus != OlResponseStatus.olResponseOrganized && !_configuration.OrganizerAsDelegate)
                 {
                     var response = MapParticipation2ToMeetingResponse(ownSourceAttendee.ParticipationStatus);
+                    var mappedResponseStatus = MapParticipation2To1(ownSourceAttendee.ParticipationStatus);
 
                     // show received meetings without response as tentative
                     if (response == null && !source.Properties.ContainsKey("X-MICROSOFT-CDO-BUSYSTATUS"))
                         targetWrapper.Inner.BusyStatus = OlBusyStatus.olTentative;
 
-                    if ((response != null) && (MapParticipation2To1(ownSourceAttendee.ParticipationStatus) != targetWrapper.Inner.ResponseStatus))
+                    if (response == null)
                     {
+                        s_logger.Debug(
+                            $"Skip meeting response (no mapping) for UID '{source.UID}'");
+                    }
+                    else if (mappedResponseStatus == targetWrapper.Inner.ResponseStatus)
+                    {
+                        s_logger.Debug(
+                            $"Skip meeting response (already matches) for UID '{source.UID}'");
+                    }
+                    else
+                    {
+                        s_logger.Debug(
+                            $"Applying meeting response for UID '{source.UID}'");
+
                         if (response == OlMeetingResponse.olMeetingDeclined)
                         {
                             targetWrapper.Inner.MeetingStatus = OlMeetingStatus.olMeetingReceivedAndCanceled;
@@ -1944,6 +1974,8 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                                     var newAppointment = newMeetingItem.Inner.GetAssociatedAppointment(false);
                                     targetWrapper.Replace(newAppointment);
                                 }
+                                s_logger.Debug(
+                                    $"Applied meeting response for UID '{source.UID}'");
                             }
                             catch (System.Exception ex)
                             {
@@ -1952,6 +1984,11 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                             }
                         }
                     }
+                }
+                else if (ownSourceAttendee == null)
+                {
+                    s_logger.Info(
+                        $"No own attendee found for UID '{source.UID}'");
                 }
             }
 
@@ -2009,9 +2046,10 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             if (_configuration.MapBody)
             {
                 target.Body = source.Description;
-                if (!string.IsNullOrWhiteSpace(source.Description) && !target.Body.Equals(source.Description))
+                if (!string.IsNullOrWhiteSpace(source.Description) && IsBodyBroken(source.Description, target.Body))
                 {
-                    s_logger.Error($"Error on mapping Description. \r\n Calendar: {source.Description} \r\n Outlook: {target.Body}");
+                    s_logger.Error($"Error on mapping Description, using RTF bypass. \r\n Calendar: {source.Description} \r\n Outlook: {target.Body}");
+                    target.RTFBody = ConvertTextToRtf(source.Description);
                     Telemetry.Signal(Telemetry.ConfirmedBugEvent, "error_mapping_description_2To1");
                 }
             }
@@ -2021,6 +2059,15 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             }
         }
 
+        private byte[] ConvertTextToRtf(string text)
+        {
+            using (var rtb = new System.Windows.Forms.RichTextBox())
+            {
+                rtb.Font = new System.Drawing.Font("Calibri", 12f);
+                rtb.Text = text;
+                return System.Text.Encoding.GetEncoding(1251).GetBytes(rtb.Rtf);
+            }
+        }
         private bool IsBodyBroken(string original, string encoded)
         {
             try
@@ -2040,9 +2087,21 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 if (encoded.Length > original.Length * 1.3) return true;
 
                 // Хвостовые «пустые» символы (пробелы, \t, \0, NBSP), которых нет в оригинале
-                if (EndsWithPadding(encoded) && !EndsWithPadding(original)) return true;
+                if (EndsWithPadding(encoded) && !EndsWithPadding(original))
+                {
+                    var trimmed = encoded.TrimEnd();
+                    var padding = encoded.Substring(trimmed.Length);
+
+                    //Игнорирование нормального паддинга от Outlook: пробел + \r\n
+                    if (padding == " \r\n" || padding == " \r" || padding == " \n")
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+
             }
-            catch(System.Exception ex)
+            catch (System.Exception ex)
             {
                 s_logger.Error($"Unexpected error on attemp to check IsBodyBroken. Original: {original} \r\n Encoded: {encoded}", ex);
                 return true;
@@ -2174,7 +2233,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         logger.LogWarning("Ignoring invalid Uri in organizer email.", ex);
                     }
 
-                    if (!EmailAddress.AreSame(sourceOrganizerEmail, _outlookEmailAddress, EmailAddress.KnownDomainsAliases))
+                    if (!EmailAddress.AreSame(sourceOrganizerEmail, _outlookEmailAddress))
                     {
                         Recipient targetRecipient = null;
 

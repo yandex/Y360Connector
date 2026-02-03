@@ -8,6 +8,8 @@ using Y360OutlookConnector.Configuration;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Office = Microsoft.Office.Core;
 using Y360OutlookConnector.Synchronization;
+using Y360OutlookConnector.Ui;
+using System.Threading.Tasks;
 
 namespace Y360OutlookConnector
 {
@@ -79,6 +81,7 @@ namespace Y360OutlookConnector
                 RestoreUiContext();
                 Components = new ComponentContainer(Application, _invitesInfo);
                 ComponentsCreated?.Invoke(this, EventArgs.Empty);
+                _ = TryApplyLastFirstFromDeploymentAsync();
             }
             catch (Exception exc)
             {
@@ -170,6 +173,63 @@ namespace Y360OutlookConnector
             if (SynchronizationContext.Current == null)
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             UiContext = SynchronizationContext.Current;
+        }
+
+        private async Task TryApplyLastFirstFromDeploymentAsync()
+        {
+            try
+            {
+                var generalOptionsProvider = Components?.GeneralOptionsProvider;
+                var options = generalOptionsProvider?.Options;
+                if (options == null)
+                {
+                    s_logger.Debug($"TryApplyLastFirstFromDeploymentAsync: GeneralOptionsProvider or Options is null, skipping auto-apply");
+                    return;
+                }
+
+                if (options.AutoLastFirstApplied)
+                {
+                    s_logger.Debug("TryApplyLastFirstFromDeploymentAsync: AutoLastFirstApplied is true, skipping auto-apply");
+                    return;
+                }
+
+                if (!RegistrySettings.ShouldEnableLastFirstAfterInstall())
+                {
+                    s_logger.Debug("TryApplyLastFirstFromDeploymentAsync: RegistrySettings.ShouldEnableLastFirstAfterInstall() is false, skipping auto-apply");
+                    return;
+                }
+
+                s_logger.Info("TryApplyLastFirstFromDeploymentAsync: Applying LastFirst formatting from deployment flag");
+
+                //Wait for the sync configuration to be loaded before applying changes to contacts
+                var syncManager = Components?.SyncManager;
+                if (syncManager != null)
+                {
+                    try
+                    {
+                        s_logger.Debug("TryApplyLastFirstFromDeploymentAsync: Waiting for SyncManager to load sync configuration");
+                        await syncManager.GetSyncTargets();
+                        s_logger.Debug("TryApplyLastFirstFromDeploymentAsync: SyncManager sync configuration loaded, proceeding with contact update");
+                    }
+                    catch (Exception ex)
+                    {
+                        s_logger.Warn("TryApplyLastFirstFromDeploymentAsync: Failed to load sync configuration from SyncManager", ex);
+                    }
+                }
+
+                var updatedOptions = options.Clone();
+                updatedOptions.FormatFileAsLastNameFirst = true;
+                updatedOptions.AutoLastFirstApplied = true;
+                generalOptionsProvider.Options = updatedOptions;
+
+                SettingsWindow.UpdateAllContactsFullName(true);
+
+                s_logger.Info("TryApplyLastFirstFromDeploymentAsync: successfully applied LastFirst formatting from deployment flag");
+            }
+            catch (Exception ex)
+            {
+                s_logger.Warn("Failed to apply LastFirst setting from deployment flag", ex);
+            }
         }
 
 

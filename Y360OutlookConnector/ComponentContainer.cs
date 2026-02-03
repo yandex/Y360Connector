@@ -32,6 +32,9 @@ namespace Y360OutlookConnector
         private readonly HttpClientFactory _httpClientFactory;
        
         public SyncManager SyncManager => _syncManager;
+
+        public IUserEmailService _userEmailService => _syncManager.UserEmailService;
+
         public ComponentContainer(Outlook.Application application, InvitesInfoStorage invitesInfo)
         {
             // Минимальная версия TLS 1.2, так как устаревшие версии протокола могут быть заблокированы в сети пользователя
@@ -60,6 +63,8 @@ namespace Y360OutlookConnector
 
             _syncManager = new SyncManager(OutlookApplication, _httpClientFactory,
                 LoginController, ProxyOptionsProvider, profileDataFolderPath, invitesInfo);
+
+            EmailAddress.SetUserEmailService(_syncManager.UserEmailService);
 
             _syncManager.Launch();
         }

@@ -58,6 +58,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
 
         private readonly IEqualityComparer<DateTime> _aTypeVersionComparer = Factories.CreateDateTimeEqualityComparer();
 
+
         public SynchronizerFactory(IOutlookSession outlookSession, IHttpClientFactory httpClientFactory,
             string profileDataFolder, ITotalProgressFactory totalProgressFactory,
             IDateTimeRangeProvider dateTimeRangeProvider,
@@ -73,7 +74,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         }
 
         public CancellableSynchronizer CreateSynchronizer(SyncTargetInfo syncTarget, string userEmail,
-            string serverUserCommonName)
+            string serverUserCommonName, FailedEntityTracker failedEntityTracker)
         {
             var folder = _outlookSession.GetFolderFromId(syncTarget.Config.OutlookFolderEntryId,
                 syncTarget.Config.OutlookFolderStoreId);
@@ -88,7 +89,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     return CreateEventSynchronizer(new Uri(syncTarget.Config.Url),
                         syncTarget.Config.OutlookFolderEntryId, syncTarget.Config.OutlookFolderStoreId,
                         folder.GetAccount(), userEmail, serverUserCommonName, syncTarget.IsReadOnly,
-                        storageDataDir);
+                        storageDataDir, failedEntityTracker);
                 case SyncTargetType.Tasks:
                     return CreateTaskSynchronizer(new Uri(syncTarget.Config.Url),
                         syncTarget.Config.OutlookFolderEntryId, syncTarget.Config.OutlookFolderStoreId,
@@ -105,7 +106,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         private CancellableSynchronizer CreateEventSynchronizer(Uri calendarUri,
             string outlookFolderEntryId, string outlookFolderStoreId,
             string outlookEmailAddress, string serverEmailAddress, string serverUserCommonName,
-            bool isReadonly, string storageDataDirectory)
+            bool isReadonly, string storageDataDirectory, FailedEntityTracker failedEntityTracker)
         {
             var mappingConfiguration = new EventMappingConfiguration
             {
@@ -136,7 +137,9 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             var synchronizer = CreateEventSynchronizer(calendarUri, outlookFolderEntryId,
                 outlookFolderStoreId, outlookEmailAddress, serverEmailAddress, serverUserCommonName,
                 isReadonly, storageDataDirectory, mappingConfiguration, cancelTokenSource,
-                EntityMappers.EventEntityMapper.Create);
+                (emailAddress, serverEmail, serverUserCommon, localTimeZoneId, outlookAppVersion, timeZoneCache, config, configuredEventTimeZone, outlookTimeZones, calendarResourceResolver) =>
+                    EntityMappers.EventEntityMapper.Create(emailAddress, serverEmail, serverUserCommon, localTimeZoneId, outlookAppVersion, timeZoneCache, config, configuredEventTimeZone, outlookTimeZones, calendarResourceResolver, failedEntityTracker),
+                failedEntityTracker);
 
             return new CancellableSynchronizer(synchronizer, cancelTokenSource);
         }
@@ -303,7 +306,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             EventMappingConfiguration mappingParameters, CancellationTokenSource cancelTokenSource,
             Func<string, Uri, string, string, string, ITimeZoneCache, EventMappingConfiguration, ITimeZone,
                 IOutlookTimeZones, ICalendarResourceResolver, IEntityMapper<IAppointmentItemWrapper, IICalendar,
-                    IEventSynchronizationContext>> entityMapperFactory)
+                    IEventSynchronizationContext>> entityMapperFactory, FailedEntityTracker failedEntityTracker)
         {
             var entityRelationDataAccess =
                 new EntityRelationDataAccess<AppointmentId, DateTime, OutlookEventRelationData, WebResourceName,
@@ -318,7 +321,8 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 _daslFilterProvider,
                 new QueryAppointmentFolderStrategy(),
                 _comWrapperFactory,
-                false);
+                false,
+                failedEntityTracker);
 
             var bTypeVersionComparer = EqualityComparer<string>.Default;
 
@@ -364,7 +368,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             var aTypeWriteRepository = BatchEntityRepositoryAdapter.Create(aTypeRepository, _exceptionHandlingStrategy);
             var bTypeWriteRepository = BatchEntityRepositoryAdapter.Create(bTypeRepository, _exceptionHandlingStrategy);
 
-            var eventSyncStateCreationStrategy = CreateEventInitialSyncStateStrategy(isReadonly, syncStateFactory, aTypeRepository);
+            var eventSyncStateCreationStrategy = CreateEventInitialSyncStateStrategy(isReadonly, syncStateFactory, aTypeRepository, outlookEmailAddress);
 
             var synchronizer =
                 new Synchronizer<AppointmentId, DateTime, IAppointmentItemWrapper, WebResourceName, string, IICalendar,
@@ -528,11 +532,11 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             CreateEventInitialSyncStateStrategy(bool isReadonly,
                 IEntitySyncStateFactory<AppointmentId, DateTime, IAppointmentItemWrapper,
                     WebResourceName, string, IICalendar, IEventSynchronizationContext> syncStateFactory,
-                OutlookEventRepositoryWrapper outlookRepository)
+                OutlookEventRepositoryWrapper outlookRepository, string outlookEmailAddress)
         {
             if (isReadonly)
                 return new EventSyncStrategyServerToOutlook(syncStateFactory);
-            return new EventSyncStrategyBothWays(syncStateFactory, _invitesInfoStorage, _outlookSession, outlookRepository);
+            return new EventSyncStrategyBothWays(syncStateFactory, _invitesInfoStorage, _outlookSession, outlookRepository, outlookEmailAddress);
         }
 
         class EntityLogMessageFactory :

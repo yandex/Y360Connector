@@ -27,6 +27,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         private readonly IOutlookSession _session;
         private readonly string _folderId;
         private readonly string _folderStoreId;
+        private readonly FailedEntityTracker _failedEntityTracker;
 
         public readonly OutlookEventRepository Inner;
 
@@ -38,12 +39,14 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             IDaslFilterProvider daslFilterProvider,
             IQueryOutlookAppointmentItemFolderStrategy queryFolderStrategy,
             IComWrapperFactory comWrapperFactory,
-            bool useDefaultFolderItemType)
+            bool useDefaultFolderItemType,
+            FailedEntityTracker failedEntityTracker)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _folderId = folderId;
             _folderStoreId = folderStoreId;
+            _failedEntityTracker = failedEntityTracker;
 
             Inner = new OutlookEventRepository(
                 session,
@@ -67,14 +70,31 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             Inner.Cleanup(entities);
         }
 
-        public Task<EntityVersion<AppointmentId, DateTime>> Create(Func<IAppointmentItemWrapper, Task<IAppointmentItemWrapper>> entityInitializer, IEventSynchronizationContext context)
+        public async Task<EntityVersion<AppointmentId, DateTime>> Create(Func<IAppointmentItemWrapper, Task<IAppointmentItemWrapper>> entityInitializer, IEventSynchronizationContext context)
         {
-            return Inner.Create(entityInitializer, context);
+            var result = await Inner.Create(entityInitializer, context);
+
+            try
+            {
+                var meetingId = ExtractMeetingId(result.Id);
+                Telemetry.Signal(Telemetry.CalendarEvents, "event_created", new
+                {
+                    meeting_id = meetingId,
+                    operation = "create",
+                    success = result != null
+                });
+            }
+            catch (Exception ex)
+            {
+                s_logger.Warn("Failed to send telemetry for created event.", ex);
+            }
+
+            return result;
         }
 
-        public Task<IEnumerable<EntityWithId<AppointmentId, IAppointmentItemWrapper>>> Get(ICollection<AppointmentId> ids, ILoadEntityLogger logger, IEventSynchronizationContext context)
+        public async Task<IEnumerable<EntityWithId<AppointmentId, IAppointmentItemWrapper>>> Get(ICollection<AppointmentId> ids, ILoadEntityLogger logger, IEventSynchronizationContext context)
         {
-            return Inner.Get(ids, logger, context);
+            return await Inner.Get(ids, logger, context);
         }
 
         public async Task<IEnumerable<EntityVersion<AppointmentId, DateTime>>> GetAllVersions(IEnumerable<AppointmentId> idsOfknownEntities, IEventSynchronizationContext context, IGetVersionsLogger logger)
@@ -135,14 +155,74 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             return Task.FromResult<IEnumerable<EntityVersion<AppointmentId, DateTime>>>(result);
         }
 
-        public Task<bool> TryDelete(AppointmentId entityId, DateTime version, IEventSynchronizationContext context, IEntitySynchronizationLogger logger)
+        public async Task<bool> TryDelete(AppointmentId entityId, DateTime version, IEventSynchronizationContext context, IEntitySynchronizationLogger logger)
         {
-            return Inner.TryDelete(entityId, version, context, logger);
+            var meetingId = ExtractMeetingId(entityId);
+
+            try
+            {
+                var result = await Inner.TryDelete(entityId, version, context, logger);
+
+                if (result)
+                {
+                    _failedEntityTracker.RemoveEntity(entityId.EntryId, "Event");
+                }
+                
+                try
+                {
+                    Telemetry.Signal(Telemetry.CalendarEvents, "event_deleted", new
+                    {
+                        meeting_id = meetingId,
+                        operation = "delete",
+                        success = result
+                    });
+                }
+                catch (Exception ex)
+                {
+                    s_logger.Warn("Failed to send telemetry for deleted event.", ex);
+                }
+
+                return result;
+            }
+            catch (Exception exc)
+            {
+                s_logger.Error($"Failed to delete an event with Id {entityId.EntryId}. Marking it as failed.", exc);
+                _failedEntityTracker.AddFailedEntity(entityId.EntryId, "Event", exc);
+                throw;
+            }
         }
 
-        public Task<EntityVersion<AppointmentId, DateTime>> TryUpdate(AppointmentId entityId, DateTime version, IAppointmentItemWrapper entityToUpdate, Func<IAppointmentItemWrapper, Task<IAppointmentItemWrapper>> entityModifier, IEventSynchronizationContext context, IEntitySynchronizationLogger logger)
+        public async Task<EntityVersion<AppointmentId, DateTime>> TryUpdate(AppointmentId entityId, DateTime version, IAppointmentItemWrapper entityToUpdate, Func<IAppointmentItemWrapper, Task<IAppointmentItemWrapper>> entityModifier, IEventSynchronizationContext context, IEntitySynchronizationLogger logger)
         {
-            return Inner.TryUpdate(entityId, version, entityToUpdate, entityModifier, context, logger);
+            try
+            {
+                var result = await Inner.TryUpdate(entityId, version, entityToUpdate, entityModifier, context, logger);
+
+                _failedEntityTracker.RemoveEntity(entityId.EntryId, "Event");
+
+                try
+                {
+                    var meetingId = ExtractMeetingId(result.Id);
+                    Telemetry.Signal(Telemetry.CalendarEvents, "event_updated", new
+                    {
+                        meeting_id = meetingId,
+                        operation = "update",
+                        success = result != null
+                    });
+                }
+                catch (Exception ex)
+                {
+                    s_logger.Warn("Failed to send telemetry for updated event.", ex);
+                }
+
+                return result;
+            }
+            catch (Exception exc)
+            {
+                s_logger.Error($"Failed to update an event with Id {entityId.EntryId}. Marking it as failed.", exc);
+                _failedEntityTracker.AddFailedEntity(entityId.EntryId, "Event", exc);
+                throw;
+            }
         }
 
         public Task VerifyUnknownEntities(Dictionary<AppointmentId, DateTime> unknownEntities, IEventSynchronizationContext context)
@@ -165,6 +245,27 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 .Select(c => c.Trim())
                 .Any(c => c == _configuration.EventCategory);
             return _configuration.InvertEventCategoryFilter ? !found : found;
+        }
+
+        private string ExtractMeetingId(AppointmentId appointmentId)
+        {
+            if (appointmentId == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(appointmentId.GlobalAppointmentId))
+            {
+                var extractedUid = AppointmentItemUtils.ExtractUidFromGlobalId(appointmentId.GlobalAppointmentId);
+
+                if (extractedUid != appointmentId.GlobalAppointmentId)
+                {
+                    return extractedUid;
+                }
+            }
+
+            //Fallback to EntryId as a more consistent option
+            return appointmentId.EntryId;
         }
     }
 }

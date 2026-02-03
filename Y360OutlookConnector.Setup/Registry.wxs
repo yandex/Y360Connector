@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Fragment>
-        <Component Id="RegistrationComponent" Directory="FilesRoot" Guid="C5E34797-783B-4675-8E61-CE31A28B3902">
+        <Component Id="RegistrationComponent" Directory="FilesRoot" Guid="C5E34797-783B-4675-8E61-CE31A28B3902" Transitive="yes">
             <RegistryKey Root="HKCU" Key="SOFTWARE\Microsoft\Office\Outlook\Addins\Y360OutlookConnector">
                 <RegistryValue Name="Manifest" Value="file:///[INSTALLFOLDER]bin\Y360OutlookConnector.vsto|vstolocal" Type="string" KeyPath="yes" />
                 <RegistryValue Name="LoadBehavior" Value="3" Type="integer"/>
@@ -15,6 +15,7 @@
             
             <RegistryKey Root="HKCU" Key="Software\Yandex\Y360.OutlookConnector">
                 <RegistryValue Name="FirstTime" Value="1" Type="integer"/>
+                <RegistryValue Name="EnableLastFirstAfterInstall" Value="[ENABLE_LASTFIRST]" Type="integer"/>
             </RegistryKey>
         </Component>
     </Fragment>

@@ -62,7 +62,15 @@ namespace Y360OutlookConnector.Ui.Login
 
             var extraQueryString = string.Join("&", parameters.Select(p => $"{WebUtility.UrlEncode(p.Key)}={WebUtility.UrlEncode(p.Value)}"));
 
-            urlBuilder.Query = extraQueryString;
+            //Handle existing query string properly
+            if (!string.IsNullOrEmpty(urlBuilder.Query))
+            {
+                urlBuilder.Query = urlBuilder.Query.TrimStart('?') + "&" + extraQueryString;
+            }
+            else
+            {
+                urlBuilder.Query = extraQueryString;
+            }
 
             return urlBuilder.Uri;
         }
@@ -91,14 +99,17 @@ namespace Y360OutlookConnector.Ui.Login
         public Uri GetPassportUrl()
         {
             var oauthUrl = GetOAuthUrl();
-           
+            s_logger.Debug($"OAuth URL generated");
+
             var extraParameters = new Dictionary<string, string>
             {
                 ["origin"] = $"{OriginAppId}",
                 ["retpath"] = $"{oauthUrl}"
             };
 
-            return CreateUri($"https://passport.yandex.{_tld}/auth", extraParameters);
+            var passportUrl = CreateUri($"https://passport.yandex.{_tld}/auth", extraParameters);
+            s_logger.Debug($"Passport URL generated");
+            return passportUrl;
         }
 
         public async Task<string> RequestTokenAsync(string code)
@@ -116,13 +127,12 @@ namespace Y360OutlookConnector.Ui.Login
                 { "device_name", Environment.MachineName }
             };
 
-            ThisAddIn.RestoreUiContext();
             var response = await _httpClient.PostAsync(url, new FormUrlEncodedContent(content));
 
             if (!response.IsSuccessStatusCode)
             {
                 string result = await response.Content.ReadAsStringAsync();
-                s_logger.Error($"Token request failed. Response: {result}");
+                s_logger.Error($"Token request failed. Status: {response.StatusCode}");
             }
             else
             {
@@ -144,7 +154,6 @@ namespace Y360OutlookConnector.Ui.Login
             {
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue("OAuth", accessToken);
 
-                ThisAddIn.RestoreUiContext();
                 var response = await _httpClient.SendAsync(httpRequest);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -152,7 +161,6 @@ namespace Y360OutlookConnector.Ui.Login
                     return null;
                 }
 
-                ThisAddIn.RestoreUiContext();
                 string responseContent = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<LoginInfo>(responseContent);
             }

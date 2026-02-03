@@ -1,11 +1,12 @@
-﻿using CalDavSynchronizer.Utilities;
-using log4net;
-using System;
+﻿using System;
+using System.IO;
 using System.Reflection;
 using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using CalDavSynchronizer.Utilities;
+using log4net;
 using Y360OutlookConnector.Clients;
 using Y360OutlookConnector.Configuration;
 
@@ -61,7 +62,7 @@ namespace Y360OutlookConnector.Ui.Login
             else
             {
                 StartLogin();
-            }            
+            }
         }
 
         private void LoginWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -110,6 +111,13 @@ namespace Y360OutlookConnector.Ui.Login
 
         private void StartLogin()
         {
+            if (!IsWebView2RuntimeAvailable())
+            {
+                Telemetry.Signal(Telemetry.LoginWindowEvents, "webview_failure", "not_installed");
+                ShowWebView2RequiredWindow();
+                return;
+            }
+
             _logonSession = new LogonSession(_httpClientFactory.CreateHttpClient());
             var passportPage = new PassportPage(_logonSession);
 
@@ -195,7 +203,7 @@ namespace Y360OutlookConnector.Ui.Login
 
                 if (String.IsNullOrEmpty(accessToken) && _confirmationCodePage != null)
                 {
-                    _confirmationCodePage.IsAlarmed = true;
+                    Dispatcher.Invoke(() => _confirmationCodePage.IsAlarmed = true);
                     Telemetry.Signal(Telemetry.LoginWindowEvents, $"{eventPrefix}_code_rejected");
                     return;
                 }
@@ -210,13 +218,51 @@ namespace Y360OutlookConnector.Ui.Login
                 AccessToken = SecureStringUtility.ToSecureString(accessToken);
 
                 _isAuthComplete = true;
-                Close();
+                Dispatcher.Invoke(() => Close());
             }
             catch (Exception exc)
             {
                 s_logger.Error("Logon failure:", exc);
-                ShowErrorPage();
+                Dispatcher.Invoke(() => ShowErrorPage());
             }
+        }
+
+        private static bool IsWebView2RuntimeAvailable()
+        {
+            try
+            {
+                var version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+                if (string.IsNullOrEmpty(version))
+                {
+                    s_logger.Warn("WebView2 runtime is not installed.");
+                    return false;
+                }
+
+                s_logger.Info($"WebView2 runtime version: {version}");
+
+                return true;
+            }
+            catch(Exception exc)
+            {
+                s_logger.Warn($"WebView2 runtime is not available: {exc.Message}");
+                if (exc is AggregateException aggExc)
+                {
+                    foreach (var inner in aggExc.InnerExceptions)
+                    {
+                        s_logger.Warn($"  Inner exception: {inner.Message}");
+                    }
+                }
+                return false;
+            }
+        }
+
+        private void ShowWebView2RequiredWindow()
+        {
+            var webView2RequiredWindow = new WebView2RuntimeRequiredWindow();
+            webView2RequiredWindow.Owner = this;
+            webView2RequiredWindow.ShowDialog();
+
+            Close();
         }
     }
 }

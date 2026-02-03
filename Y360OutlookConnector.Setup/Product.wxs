@@ -12,11 +12,13 @@
                  Description="Yandex Connector !(bind.property.ProductVersion) Installer"
                  Comments="(c) 2024 !(bind.property.Manufacturer)"/>
 
-        <MajorUpgrade AllowDowngrades="yes" />
+        <MajorUpgrade AllowDowngrades="yes"
+                      Schedule="afterInstallInitialize"/>
 
         <MediaTemplate EmbedCab="yes" />
 
         <PropertyRef Id="WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED"/>
+        <Property Id="ENABLE_LASTFIRST" Value="0" Secure="yes"/>
         <Condition Message="This application requires .NET Framework 4.8. Please install the .NET Framework then run this installer again.">
             <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED]]>
         </Condition>
@@ -34,6 +36,18 @@
                         <Directory Id="FilesRoot" Name="bin" >
                             <Directory Id="EnResDir" Name="en-US" />
                             <Directory Id="RuResDir" Name="ru-RU" />
+
+                            <Directory Id="RuntimesDir" Name="runtimes">
+                                <Directory Id="RuntimesWinArm64Dir" Name="win-arm64">
+                                    <Directory Id="RuntimesWinArm64NativeDir" Name="native" />
+                                </Directory>
+                                <Directory Id="RuntimesWinX64Dir" Name="win-x64">
+                                    <Directory Id="RuntimesWinX64NativeDir" Name="native" />
+                                </Directory>
+                                <Directory Id="RuntimesWinX86Dir" Name="win-x86">
+                                    <Directory Id="RuntimesWinX86NativeDir" Name="native" />
+                                </Directory>
+                            </Directory>
                         </Directory>
                     </Directory>
                 </Directory>
@@ -49,6 +63,10 @@
             <ComponentRef Id="RegistrationComponent" />
             <ComponentRef Id="RuResComponent" />
             <ComponentRef Id="EnResComponent" />
+            <ComponentRef Id="WebView2ManagedComponent" />
+            <ComponentRef Id="WebView2LoaderX86Component" />
+            <ComponentRef Id="WebView2LoaderX64Component" />
+            <ComponentRef Id="WebView2LoaderArm64Component" />
         </ComponentGroup>
         
     </Product>

@@ -142,7 +142,7 @@ namespace Y360OutlookConnector.Ui
 
             var organizerEmail = currentAppointment.GetOrganizerEmailAddress(NullEntitySynchronizationLogger.Instance);
 
-            if (EmailAddress.AreSame(organizerEmail, outlookEmail, EmailAddress.KnownDomainsAliases))
+            if (EmailAddress.AreSame(organizerEmail, outlookEmail))
             {
                 return true;
             }

@@ -219,11 +219,29 @@
   <data name="Messages_UnauthorizedMessageDescription" xml:space="preserve">
     <value>To start syncing, log in with your Yandex ID</value>
   </data>
+  <data name="Messages_WebView2BusinessHelpText" xml:space="preserve">
+    <value>Business help</value>
+  </data>
+  <data name="Messages_WebView2CustomersHelpText" xml:space="preserve">
+    <value>Customers help</value>
+  </data>
+  <data name="Messages_WebView2RequiredErrorDescription" xml:space="preserve">
+    <value>The WebView2 Runtime is required to display web content within this application. Please install the WebView2 Runtime to continue using all features of the application.</value>
+  </data>
+  <data name="Messages_WebView2RequiredErrorTitle" xml:space="preserve">
+    <value>WebView2 Runtime Required</value>
+  </data>
   <data name="SettingsWindow_ApplyButton" xml:space="preserve">
     <value>Save changes</value>
   </data>
   <data name="SettingsWindow_CancelButton" xml:space="preserve">
     <value>Cancel</value>
+  </data>
+  <data name="SettingsWindow_ContactSyncPanelTitle" xml:space="preserve">
+    <value>Contacts sync</value>
+  </data>
+  <data name="SettingsWindow_FormatFileAsLastNameFirst" xml:space="preserve">
+    <value>Format contacts in "Last Name, First Name, Middle Name" style</value>
   </data>
   <data name="SettingsWindow_GeneralSettingsPanelTitle" xml:space="preserve">
     <value>General</value>

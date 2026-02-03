@@ -114,5 +114,34 @@ namespace Y360OutlookConnector.Synchronization
                 XmlFile.Save(_fileName, _info);
             }
         }
+
+        public bool IsIncomingInvite(string globalAppointmentId)
+        {
+            if (String.IsNullOrEmpty(globalAppointmentId))
+            {
+                return false;
+            }
+
+            lock (_info)
+            {
+                var uid = AppointmentItemUtils.ExtractUidFromGlobalId(globalAppointmentId);
+                var entry = _info.Invites.Find(x => x.Uid == uid);
+                return entry != null && !entry.MarkedForDeletion;
+            }
+        }
+
+        public bool IsIncomingInviteByUid(string uid)
+        {
+            if (String.IsNullOrEmpty(uid))
+            {
+                return false;
+            }
+
+            lock (_info)
+            {
+                var entry = _info.Invites.Find(x => x.Uid == uid);
+                return entry != null && !entry.MarkedForDeletion;
+            }
+        }
     }
 }

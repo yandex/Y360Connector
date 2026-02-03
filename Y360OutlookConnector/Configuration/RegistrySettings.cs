@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using log4net;
 using Microsoft.Win32;
@@ -12,6 +12,7 @@ namespace Y360OutlookConnector.Configuration
         const string DisableAutomaticUpdatesValueName = "DisableAutomaticUpdates";
         const string AutomaticUpdatesChannelValueName = "AutomaticUpdatesChannel";
         const string FirstTimeValueName = "FirstTime";
+        const string EnableLastFirstAfterInstallValueName = "EnableLastFirstAfterInstall";
 
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -111,6 +112,48 @@ namespace Y360OutlookConnector.Configuration
                 s_logger.Warn($"Failed to delete {FirstTimeValueName} " +
                               $"from HKCU\\{SettingsKeyPath}", ex);
             }
+        }
+
+        public static bool ShouldEnableLastFirstAfterInstall()
+        {
+            try
+            {
+                using (var regKey = Registry.CurrentUser.OpenSubKey(SettingsKeyPath))
+                {
+                    object value = regKey?.GetValue(EnableLastFirstAfterInstallValueName);
+                    if (value == null)
+                    {
+                        s_logger.Debug($"ShouldEnableLastFirstAfterInstall: registry value '{EnableLastFirstAfterInstallValueName}' not found");
+                        return false;
+                    }
+
+                    bool result = false;
+                    if (value is string stringValue)
+                    {
+                        if (Boolean.TryParse(stringValue, out var boolResult))
+                        {
+                            return boolResult;
+                        }
+                        else if (Int32.TryParse(stringValue, out var intResult))
+                        {
+                            return intResult != 0;
+                        }
+                    }
+                    else
+                    {
+                        result =  Convert.ToInt32(value) != 0;
+                    }
+
+                    s_logger.Info($"ShouldEnableLastFirstAfterInstall: registry value = '{value}', result='{result}'");
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                s_logger.Warn($"Failed to retrieve {EnableLastFirstAfterInstallValueName} " +
+                              $"from HKCU\\{SettingsKeyPath}", ex);
+            }
+            return false;
         }
     }
 }

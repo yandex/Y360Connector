@@ -9,7 +9,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <webview:WebView x:Name="webView" Focusable="True" Visibility="Hidden" />
+        <webview:WebView2Control x:Name="webView" Focusable="True" Visibility="Hidden" />
         <local:Throbber x:Name="throbber" Width="44" Height="44" />
     </Grid>
 </UserControl>
