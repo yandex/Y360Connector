@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using CalDavSynchronizer.Ui;
 using log4net;
@@ -16,24 +17,55 @@ namespace Y360OutlookConnector.Synchronization
 
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
+        private enum AccountMatchKind
+        {
+            NoSessionAccounts,
+            MatchedBySmtp,
+            MatchedByLocalPart,
+            FallbackToFirstAccount
+        }
+
         public AccountFolders(string userEmail, Outlook.NameSpace session)
         {
             _session = session;
-            _account = FindBestMatchAccount(userEmail);
+            AccountMatchKind matchKind;
+            _account = FindBestMatchAccount(userEmail, out matchKind);
 
-            if (_account != null)
+            switch (matchKind)
             {
-                s_logger.Debug($"Matched Outlook account: {_account.SmtpAddress}");
-            }
-            else
-            {
-                s_logger.Warn("No matching Outlook account found. Fallback to default");
+                case AccountMatchKind.MatchedBySmtp:
+                case AccountMatchKind.MatchedByLocalPart:
+                    s_logger.Debug($"Matched Outlook account ({matchKind}): {_account.SmtpAddress}");
+                    break;
+                case AccountMatchKind.FallbackToFirstAccount:
+                    s_logger.WarnFormat("No Outlook account matched Connector user email by SMTP or local part; " +
+                        "using first account in Session.Accounts as fallback. " +
+                        "Connector user email: '{0}', chosen SmtpAddress: '{1}', Session.Accounts.Count: {2}.",
+                        userEmail ?? String.Empty,
+                        _account != null ? (_account.SmtpAddress ?? String.Empty) : String.Empty,
+                        _session.Accounts.Count);
+                    s_logger.Debug($"Fallback Outlook account: {_account.SmtpAddress}");
+                    break;
+                case AccountMatchKind.NoSessionAccounts:
+                    s_logger.WarnFormat(
+                        "Session.Accounts is empty; cannot bind to a mailbox account. " +
+                        "Connector user email: '{0}'. Default session folders will be used where applicable.",
+                        userEmail ?? String.Empty);
+                    break;
             }
         }
 
         public Outlook.MAPIFolder GetRootFolder()
         {
-            return _account?.DeliveryStore?.GetRootFolder() ?? _session.DefaultStore.GetRootFolder();
+            try
+            {
+                return _account?.DeliveryStore?.GetRootFolder() ?? _session.DefaultStore.GetRootFolder();
+            }
+            catch (COMException ex)
+            {
+                s_logger.Error("Failed to get root folder via account DeliveryStore, falling back to DefaultStore", ex);
+                return _session.DefaultStore.GetRootFolder();
+            }
         }
 
         public string CreateNewFolderName(SyncTargetType targetType, string baseName)
@@ -90,15 +122,15 @@ namespace Y360OutlookConnector.Synchronization
                 switch (targetType)
                 {
                     case SyncTargetType.Calendar:
-                        result = _account?.DeliveryStore.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderCalendar) ??
+                        result = _account?.DeliveryStore?.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderCalendar) ??
                                  _session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderCalendar);
                         break;
                     case SyncTargetType.Contacts:
-                        result = _account?.DeliveryStore.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts) ??
+                        result = _account?.DeliveryStore?.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts) ??
                                  _session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts);
                         break;
                     case SyncTargetType.Tasks:
-                        result = _account?.DeliveryStore.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderTasks) ??
+                        result = _account?.DeliveryStore?.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderTasks) ??
                                  _session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderTasks);
                         break;
                 }
@@ -110,7 +142,7 @@ namespace Y360OutlookConnector.Synchronization
             return result;
         }
 
-        private Outlook.Account FindBestMatchAccount(string userEmail)
+        private Outlook.Account FindBestMatchAccount(string userEmail, out AccountMatchKind matchKind)
         {
             // First pass - compare the whole email addresses
             foreach (Outlook.Account account in _session.Accounts)
@@ -127,6 +159,7 @@ namespace Y360OutlookConnector.Synchronization
                 if (EmailAddress.AreSame(userEmail, account.SmtpAddress))
                 {
                     Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "suitable_account_found");
+                    matchKind = AccountMatchKind.MatchedBySmtp;
                     return account;
                 }
             }
@@ -134,19 +167,39 @@ namespace Y360OutlookConnector.Synchronization
             // Second pass - compare only the left parts of email addresses
             foreach (Outlook.Account account in _session.Accounts)
             {
-                if (account.DeliveryStore == null) continue;
+                try
+                {
+                    if (account.DeliveryStore == null)
+                    {
+                        continue;
+                    }
+                }
+                catch (Exception exc)
+                {
+                    s_logger.Error($"Failed to retrieve delivery store for account {account.UserName}", exc);
+                    continue;
+                }
 
                 var userNameId = EmailAddress.Parse(userEmail).Normalize().NameId;
                 var accountNameId = EmailAddress.Parse(account.SmtpAddress).Normalize().NameId;
                 if (String.Equals(userNameId, accountNameId, StringComparison.OrdinalIgnoreCase))
                 {
                     Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "suitable_account_found");
+                    matchKind = AccountMatchKind.MatchedByLocalPart;
                     return account;
                 }
             }
 
+            if (_session.Accounts.Count > 0)
+            {
+                Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "suitable_account_fallback_first");
+                matchKind = AccountMatchKind.FallbackToFirstAccount;
+                return _session.Accounts[1];
+            }
+
             Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "suitable_account_not_found");
-            return _session.Accounts.Count > 0 ? _session.Accounts[1] : null;
+            matchKind = AccountMatchKind.NoSessionAccounts;
+            return null;
         }
 
         public static bool IsFolderTrashed(Outlook.MAPIFolder folder)

@@ -1,4 +1,4 @@
-using CalDavSynchronizer.Implementation.ComWrappers;
+﻿using CalDavSynchronizer.Implementation.ComWrappers;
 using CalDavSynchronizer.Ui;
 using log4net;
 using System;
@@ -279,7 +279,7 @@ namespace Y360OutlookConnector.Ui
 
             Telemetry.Signal(Telemetry.SyncConfigWindowEvents, "apply_button");
 
-            _syncManager.ApplySyncConfig(syncTargets);
+            _syncManager.ApplySyncConfig(syncTargets, savePrefs: true);
 
             if (_syncManager.Status.State != SyncState.Running)
             {

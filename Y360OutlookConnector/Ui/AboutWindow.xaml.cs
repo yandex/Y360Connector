@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
@@ -25,6 +25,8 @@ namespace Y360OutlookConnector.Ui
             var thisVersion = Assembly.GetExecutingAssembly().GetName().Version;
             VersionLabel.Text = String.Format(Localization.Strings.AboutWindow_VersionString, 
                 thisVersion.ToString(3), thisVersion.Revision);
+
+            CopyrightLabel.Text = String.Format(Localization.Strings.AboutWindow_CopyrightText, global::Y360OutlookConnector.BuildInfo.CopyrightYear);
 
             Closed += AboutWindow_Closed;
             IsVisibleChanged += AboutWindow_IsVisibleChanged;

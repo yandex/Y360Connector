@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using log4net;
 using Newtonsoft.Json;
 using Y360OutlookConnector.Configuration;
@@ -17,7 +18,7 @@ namespace Y360OutlookConnector.Synchronization
         private static readonly ILog s_logger = LogManager.GetLogger(typeof(UserEmailService));
 
         private readonly HttpClient _httpClient;
-        private readonly string _apiEndpoint = "https://cloud-api.yandex.ru/v1/calendar/user-info";
+        private readonly string _apiEndpoint = EndpointConfig.GetCalendarUserInfoUrl();
 
         // In-memory storage
         private List<EmailAddress> _cachedUserEmails;
@@ -25,6 +26,8 @@ namespace Y360OutlookConnector.Synchronization
         private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
         private readonly object _cacheLock = new object();
         private readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(1, 1);
+        private DateTime _lastCacheInvalidLogAt = DateTime.MinValue;
+        private readonly TimeSpan _cacheInvalidLogThrottle = TimeSpan.FromMinutes(5);
 
         public UserEmailService(HttpClient httpClient)
         {
@@ -61,6 +64,8 @@ namespace Y360OutlookConnector.Synchronization
                 using (var request = new HttpRequestMessage(HttpMethod.Get, _apiEndpoint))
                 {
                     request.Headers.Authorization = new AuthenticationHeaderValue("OAuth", accessToken);
+                    request.Headers.TryAddWithoutValidation("Origin", EndpointConfig.OAuthOriginAppId);
+                    request.Headers.TryAddWithoutValidation("X-Borigin", "calendar");
 
                     s_logger.Debug($"Making API request to: {_apiEndpoint}");
                     var response = await _httpClient.SendAsync(request);
@@ -71,30 +76,49 @@ namespace Y360OutlookConnector.Synchronization
 
                     var userEmailsResponse = JsonConvert.DeserializeObject<UserEmailsResponse>(jsonContent);
 
+                    if (userEmailsResponse?.Users == null)
+                    {
+                        s_logger.Warn("API returned empty or invalid user-info response");
+                        return new List<EmailAddress>();
+                    }
+
+                    var seenNormalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var userEmails = new List<EmailAddress>();
 
                     foreach (var user in userEmailsResponse.Users)
                     {
+                        if (user?.Addresses == null)
+                        {
+                            continue;
+                        }
                         foreach (var address in user.Addresses)
                         {
-                            if (address.IsValidated)
+                            if (address == null)
                             {
-                                var emailAddress = EmailAddress.Parse(address.Address);
-                                if (!string.IsNullOrEmpty(emailAddress.NameId) && !string.IsNullOrEmpty(emailAddress.Domain))
-                                {
-                                    var normalizedEmail = emailAddress.Normalize();
-                                    userEmails.Add(normalizedEmail);
-                                    s_logger.Debug($"Added validated email: {address.Address} -> {normalizedEmail} (native: {address.IsNative})");
-                                }
-                                else
-                                {
-                                    s_logger.Warn($"Skipped invalid email format: {address.Address}");
-                                }
+                                continue;
                             }
-                            else
+                            if (!address.IsValidated)
                             {
-                                s_logger.Debug($"Skipped unvalidated email: {address.Address}");
+                                s_logger.Debug($"Skipping unvalidated email: {address.Address}");
+                                continue;
                             }
+
+                            var emailAddress = EmailAddress.Parse(address.Address ?? string.Empty);
+                            if (string.IsNullOrEmpty(emailAddress.NameId) || string.IsNullOrEmpty(emailAddress.Domain))
+                            {
+                                s_logger.Debug($"Skipped invalid email format: {address.Address}");
+                                continue;
+                            }
+
+                            var normalizedEmail = emailAddress.Normalize();
+                            var normalizedKey = $"{normalizedEmail.NameId.ToLowerInvariant()}@{normalizedEmail.Domain.ToLowerInvariant()}";
+                            if (!seenNormalized.Add(normalizedKey))
+                            {
+                                continue;
+                            }
+
+                            userEmails.Add(normalizedEmail);
+                            s_logger.Debug($"Added validated email: {address.Address} -> {normalizedEmail} (native: {address.IsNative})");
                         }
                     }
 
@@ -132,16 +156,21 @@ namespace Y360OutlookConnector.Synchronization
 
             lock (_cacheLock)
             {
-                if (!IsCacheValid())
+                var isCacheValid = IsCacheValid();
+                if (!isCacheValid)
                 {
-                    s_logger.Warn("No cached user emails available for comparison or cache is expired");
-                    return false;
+                    LogCacheInvalidState("IsUserEmail");
+                    // Intentional behavior: if cache is stale but present, keep alias-aware lookup to avoid
+                    // false negatives in own-attendee detection during temporary cache refresh gaps
+                    if (_cachedUserEmails == null || _cachedUserEmails.Count == 0)
+                    {
+                        return false;
+                    }
                 }
 
                 var normalizedEmailToCheck = NormalizeEmail(emailToCheck);
                 var isUserEmail = _cachedUserEmails.Any(email => NormalizeEmail(email.ToString()) == normalizedEmailToCheck);
 
-                s_logger.Debug($"Email comparison: {emailToCheck} -> {isUserEmail}");
                 return isUserEmail;
             }
         }
@@ -153,14 +182,18 @@ namespace Y360OutlookConnector.Synchronization
 
             lock (_cacheLock)
             {
-                if (!IsCacheValid())
-                {
-                    s_logger.Warn("No cached user emails available for comparison or cache is expired");
-                    return false;
-                }
-
                 var normalizedEmail1 = NormalizeEmail(email1);
                 var normalizedEmail2 = NormalizeEmail(email2);
+
+                var isCacheValid = IsCacheValid();
+                if (!isCacheValid)
+                {
+                    LogCacheInvalidState("AreEmailsSame");
+                    if (_cachedUserEmails == null || _cachedUserEmails.Count == 0)
+                    {
+                        return normalizedEmail1 == normalizedEmail2;
+                    }
+                }
 
                 var email1IsUser = _cachedUserEmails.Any(email => NormalizeEmail(email.ToString()) == normalizedEmail1);
                 var email2IsUser = _cachedUserEmails.Any(email => NormalizeEmail(email.ToString()) == normalizedEmail2);
@@ -202,6 +235,40 @@ namespace Y360OutlookConnector.Synchronization
             var parsed = EmailAddress.Parse(email.Trim());
             var normalized = parsed.Normalize();
             return $"{normalized.NameId.ToLowerInvariant()}@{normalized.Domain.ToLowerInvariant()}";
+        }
+
+        private void LogCacheInvalidState(string operationName)
+        {
+            var now = DateTime.UtcNow;
+            if (now - _lastCacheInvalidLogAt < _cacheInvalidLogThrottle)
+            {
+                return;
+            }
+
+            var hasStaleCache = _cachedUserEmails != null && _cachedUserEmails.Count > 0;
+            var invalidReason = GetCacheInvalidReason(now);
+            s_logger.Info(
+                $"User email cache is invalid during {operationName}. " +
+                $"Reason: {invalidReason}. " +
+                $"Stale cache available: {hasStaleCache}. " +
+                $"Comparison continues with {(hasStaleCache ? "stale cache" : "normalized fallback")}.");
+            _lastCacheInvalidLogAt = now;
+        }
+
+        private string GetCacheInvalidReason(DateTime now)
+        {
+            if (_cachedUserEmails == null || _cachedUserEmails.Count == 0)
+            {
+                return "cache is empty";
+            }
+
+            var age = now - _lastCacheUpdate;
+            if (age >= _cacheExpiration)
+            {
+                return $"cache is expired (age={age.TotalMinutes:F1}m, ttl={_cacheExpiration.TotalMinutes:F1}m)";
+            }
+
+            return "cache state mismatch";
         }
     }
 }

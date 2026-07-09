@@ -15,6 +15,7 @@ using CalDavSynchronizer.ChangeWatching;
 using CalDavSynchronizer.Implementation.Events;
 using CalDavSynchronizer.Utilities;
 using System.Windows.Controls;
+using System.Windows.Media.Animation;
 
 namespace Y360OutlookConnector.Synchronization
 {
@@ -22,14 +23,12 @@ namespace Y360OutlookConnector.Synchronization
     {
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-        private const string CalDavUrl = "https://caldav.yandex.ru/";
-        private const string CardDavUrl = "https://carddav.yandex.ru/";
-
         private readonly LoginController _loginController;
         private readonly string _dataFolderPath;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly Scheduler _scheduler;
         private readonly SyncConfigController _syncConfig;
+        private readonly UserSyncPrefsController _syncPrefs;
         private readonly System.Windows.Forms.Timer _timer;
         private readonly InvitesInfoStorage _invitesInfo;
         private readonly IUserEmailService _userEmailService;
@@ -63,6 +62,7 @@ namespace Y360OutlookConnector.Synchronization
             _scheduler = new Scheduler(application.Session, httpClientFactory, dataFolderPath, Status, invitesInfo);
 
             _syncConfig = new SyncConfigController(dataFolderPath);
+            _syncPrefs = new UserSyncPrefsController(dataFolderPath, _syncConfig);
 
             _invitesInfo = invitesInfo;
             _loginController = loginController;
@@ -138,13 +138,18 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        public void ApplySyncConfig(List<SyncTargetInfo> syncTargets)
+        public void ApplySyncConfig(List<SyncTargetInfo> syncTargets, bool savePrefs = false)
         {
             UserEmail = _loginController.UserInfo.Email;
             var userCommonName = _loginController.UserInfo.RealName;
 
             _syncConfig.SelectUser(UserEmail);
             _syncConfig.SetConfig(syncTargets.ConvertAll(x => x.Config));
+
+            if (savePrefs)
+            {
+                _syncPrefs.SaveAll(UserEmail, syncTargets.ConvertAll(x => x.Config));
+            }
 
             if (_cachedSyncTargets != null)
             {
@@ -219,6 +224,8 @@ namespace Y360OutlookConnector.Synchronization
             try
             {
                 OnSyncStarted();
+
+                await FetchUserEmailsAsync();
 
                 ThisAddIn.RestoreUiContext();
                 await UpdateSyncTargetsAsync(manuallyTriggered);
@@ -432,7 +439,7 @@ namespace Y360OutlookConnector.Synchronization
 
         private async Task<List<SyncTargetInfo>> GetCalDavResources(IWebDavClient webDavClient)
         {
-            var calDavDataProvider = new CalDavResourcesDataAccess(new Uri(CalDavUrl), webDavClient);
+            var calDavDataProvider = new CalDavResourcesDataAccess(new Uri(EndpointConfig.CalDavBaseUrl), webDavClient);
             var resources = await calDavDataProvider.GetResources();
 
             var ctags = new Dictionary<Guid, string>();
@@ -473,7 +480,7 @@ namespace Y360OutlookConnector.Synchronization
 
         private async Task<List<SyncTargetInfo>> GetCardDavResources(IWebDavClient webDavClient)
         {
-            var calDavDataAccess = new CardDavDataAccess(new Uri(CardDavUrl), webDavClient, string.Empty, contentType => true);
+            var calDavDataAccess = new CardDavDataAccess(new Uri(EndpointConfig.CardDavBaseUrl), webDavClient, string.Empty, contentType => true);
             var resources = await calDavDataAccess.GetUserAddressBooksNoThrow(false);
 
             var items = new List<SyncTargetInfo>();
@@ -506,13 +513,23 @@ namespace Y360OutlookConnector.Synchronization
             var config = _syncConfig.GetSyncTargetByUrl(url);
             if (config == null)
             {
+                var prefActive = _syncPrefs.GetActive(UserEmail, url.ToString());
                 config = new SyncTargetConfig
                 {
                     Id = Guid.NewGuid(),
                     Url = url.ToString(),
-                    Active = true
+                    Active = prefActive ?? true
                 };
             }
+            else
+            {
+                var prefActive = _syncPrefs.GetActive(UserEmail, config.Url);
+                if (prefActive.HasValue)
+                {
+                    config.Active = prefActive.Value;
+                }
+            }
+
             return config;
         }
 

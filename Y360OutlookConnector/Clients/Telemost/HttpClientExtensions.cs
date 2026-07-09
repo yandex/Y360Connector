@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Y360OutlookConnector.Clients.Telemost.Model;
+using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Clients.Telemost
 {
@@ -16,7 +17,7 @@ namespace Y360OutlookConnector.Clients.Telemost
 
         public static async Task<ApiCallResult<ConferenceShort>> CreateTelemostMeetingAsync(this HttpClient client, bool isInternal)
         {
-            var url = $"https://cloud-api.yandex.net/v1/telemost-api/conferences";
+            var url = EndpointConfig.GetTelemostConferencesUrl();
 
             var jsonObject = new ConferenceData { AccessLevel = isInternal ? ConferenceData.AccessLevelEnum.ORGANIZATION : ConferenceData.AccessLevelEnum.PUBLIC };
 
@@ -75,7 +76,7 @@ namespace Y360OutlookConnector.Clients.Telemost
             {
                 VerifyMeetingId(id);
 
-                var url = $"https://cloud-api.yandex.net/v1/telemost-api/conferences/{id}";
+                var url = EndpointConfig.GetTelemostConferenceUrl(id);
 
                 var request = new HttpRequestMessage(new HttpMethod("GET"), url);
 
@@ -121,7 +122,7 @@ namespace Y360OutlookConnector.Clients.Telemost
             {
                 VerifyMeetingId(id);
 
-                var url = $"https://cloud-api.yandex.net/v1/telemost-api/conferences/{id}";
+                var url = EndpointConfig.GetTelemostConferenceUrl(id);
 
                 var jsonObject = new ConferenceData { AccessLevel = isInternal ? ConferenceData.AccessLevelEnum.ORGANIZATION : ConferenceData.AccessLevelEnum.PUBLIC };
 

@@ -60,7 +60,7 @@ namespace Y360OutlookConnector
             var fileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
             using (var client = new HttpClient())
             {
-                var url = $"https://avatars.yandex.net/get-yapic/{avatarId}/islands-75";
+                var url = EndpointConfig.GetAvatarUrl(avatarId);
 
                 ThisAddIn.RestoreUiContext();
                 using (var stream = await client.GetStreamAsync(url))

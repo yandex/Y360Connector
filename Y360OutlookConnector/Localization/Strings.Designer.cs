@@ -1206,6 +1206,15 @@ namespace Y360OutlookConnector.Localization {
         /// <summary>
         ///   Looks up a localized string similar to .
         /// </summary>
+        public static string YandexCalendar_Toolbar_CreateEventButton {
+            get {
+                return ResourceManager.GetString("YandexCalendar_Toolbar_CreateEventButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
         public static string YandexCalendar_Toolbar_EditEventButton {
             get {
                 return ResourceManager.GetString("YandexCalendar_Toolbar_EditEventButton", resourceCulture);

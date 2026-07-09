@@ -33,14 +33,14 @@
             <TextBlock x:Name="BusinessLinkTextBox" Margin="0,4,0,4"
                        TextAlignment="Center" TextWrapping="Wrap" FontSize="14px"
                        Foreground="#1A1A1A">
-                          <Hyperlink NavigateUri="https://yandex.ru/support/yandex-360/business/calendar/ru/plug-in#inst" RequestNavigate="Hyperlink_RequestNavigate">
+                          <Hyperlink x:Name="BusinessHelpHyperLink" RequestNavigate="Hyperlink_RequestNavigate">
                               <TextBlock Text="{x:Static l10n:Strings.Messages_WebView2BusinessHelpText}" />
                           </Hyperlink>
             </TextBlock>
             <TextBlock x:Name="CustomersLinkTextBox" Margin="0,4,0,4"
                        TextAlignment="Center" TextWrapping="Wrap" FontSize="14px"
                        Foreground="#1A1A1A">
-                          <Hyperlink NavigateUri="https://yandex.ru/support/yandex-360/customers/calendar/web/ru/plug-in#inst" RequestNavigate="Hyperlink_RequestNavigate">
+                          <Hyperlink x:Name="CustomersHelpHyperLink" RequestNavigate="Hyperlink_RequestNavigate">
                               <TextBlock Text="{x:Static l10n:Strings.Messages_WebView2CustomersHelpText}" />
                           </Hyperlink>
             </TextBlock>

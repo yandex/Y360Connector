@@ -60,6 +60,17 @@ namespace Y360OutlookConnector.Configuration
             return syncTarget?.Clone();
         }
 
+        public Dictionary<string, List<SyncTargetConfig>> GetAllConfigs()
+        {
+            var result = new Dictionary<string, List<SyncTargetConfig>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in _configs)
+            {
+                result[item.Key] = item.Value.ConvertAll(c => c.Clone());
+            }
+
+            return result;
+        }
+
         public bool IsFolderInUseByOtherUsers(string entryId, string storeId)
         {
             if (String.IsNullOrEmpty(_currentUser)) throw new ArgumentException("user not selected");

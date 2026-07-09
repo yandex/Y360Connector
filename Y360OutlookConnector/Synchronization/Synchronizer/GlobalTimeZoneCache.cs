@@ -1,23 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Reflection;
 using DDay.iCal;
 using log4net;
 using System.IO;
-using System.Net;
+using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Synchronization.Synchronizer
 {
     public class GlobalTimeZoneCache
     {
         private static readonly ILog s_logger = LogManager.GetLogger(MethodInfo.GetCurrentMethod().DeclaringType);
-
-        private const string TZURL_FULL = "https://www.tzurl.org/zoneinfo/";
-        private const string TZURL_OUTLOOK = "https://www.tzurl.org/zoneinfo-outlook/";
 
         private readonly Dictionary<string, ITimeZone> _tzOutlookMap;
         private readonly Dictionary<string, ITimeZone> _tzHistoricalMap;
@@ -33,8 +28,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             ITimeZone tz = GetTzOrNull(tzId, includeHistoricalData);
             if (tz == null)
             {
-                var baseurl = includeHistoricalData ? TZURL_FULL : TZURL_OUTLOOK;
-                var uri = new Uri(baseurl + tzId + ".ics");
+                var uri = new Uri(EndpointConfig.GetTimeZoneDefinitionUrl(tzId, includeHistoricalData));
                 var col = await LoadFromUriOrNull(httpClient, uri);
                 if (col != null)
                 {
@@ -72,32 +66,42 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
 
         private async Task<IICalendarCollection> LoadFromUriOrNull(HttpClient httpClient, Uri uri)
         {
-            using (var response = await httpClient.GetAsync(uri))
+            try
             {
-                try
+                using (var response = await httpClient.GetAsync(uri))
                 {
-                    response.EnsureSuccessStatusCode();
-                }
-                catch (Exception)
-                {
-                    s_logger.ErrorFormat("Can't access timezone data from '{0}'", uri);
-                    return null;
-                }
-
-                try
-                {
-                    var result = await response.Content.ReadAsStringAsync();
-                    using (var reader = new StringReader(result))
+                    try
                     {
-                        var collection = iCalendar.LoadFromStream(reader);
-                        return collection;
+                        response.EnsureSuccessStatusCode();
+                    }
+                    catch (Exception)
+                    {
+                        s_logger.ErrorFormat("Can't access timezone data from '{0}'", uri);
+                        return null;
+                    }
+
+                    try
+                    {
+                        var result = await response.Content.ReadAsStringAsync();
+                        using (var reader = new StringReader(result))
+                        {
+                            var collection = iCalendar.LoadFromStream(reader);
+                            return collection;
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        s_logger.ErrorFormat("Can't parse timezone data from '{0}'", uri);
+                        return null;
                     }
                 }
-                catch (Exception)
-                {
-                    s_logger.ErrorFormat("Can't parse timezone data from '{0}'", uri);
-                    return null;
-                }
+            }
+            catch (Exception ex)
+            {
+                // Returning null is safe: callers treat null as "timezone unavailable" and fall back to UTC,
+                // so event creation/update continues without losing data.
+                s_logger.Warn($"Network error loading timezone data from '{uri}', continuing without tz file", ex);
+                return null;
             }
         }
     }

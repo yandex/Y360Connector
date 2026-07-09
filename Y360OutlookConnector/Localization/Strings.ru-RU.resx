@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AboutWindow_CopyrightText" xml:space="preserve">
-    <value>© Яндекс Коннектор, 2024. Все права защищены</value>
+    <value>© Яндекс Коннектор, {0}. Все права защищены</value>
   </data>
   <data name="AboutWindow_LicenseAgreement" xml:space="preserve">
     <value>Лицензионное соглашение</value>
@@ -512,5 +512,8 @@
   </data>
   <data name="YandexCalendar_Toolbar_RibbonToolbarButton" xml:space="preserve">
     <value>Яндекс Календарь</value>
+  </data>
+    <data name="YandexCalendar_Toolbar_CreateEventButton" xml:space="preserve">
+    <value>Создать в Яндекс Календаре</value>
   </data>
 </root>

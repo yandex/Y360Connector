@@ -380,13 +380,17 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 target.Inner.Complete = false;
             }
 
-            target.Inner.Status = (target.Inner.Complete && target.Inner.PercentComplete == 100) ? OlTaskStatus.olTaskComplete : MapStatus2To1(source.Status);
-
-            // Only set PercentComplete if source is actually set and status is not already completed to avoid overwriting the status again
-            if (source.PercentComplete != 0 && target.Inner.Status != OlTaskStatus.olTaskComplete)
+            if (source.PercentComplete != 0)
             {
                 target.Inner.PercentComplete = source.PercentComplete;
             }
+
+            if (target.Inner.Complete)
+            {
+                target.Inner.PercentComplete = 100;
+            }
+
+            target.Inner.Status = (target.Inner.Complete && target.Inner.PercentComplete == 100) ? OlTaskStatus.olTaskComplete : MapStatus2To1(source.Status);
 
             if (_configuration.MapPriority)
                 target.Inner.Importance = CommonEntityMapper.MapPriority2To1(source.Priority);

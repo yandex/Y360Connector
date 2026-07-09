@@ -54,11 +54,28 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.FolderMonitor
                     }
                     if (appointment.MeetingStatus != Outlook.OlMeetingStatus.olMeetingReceived)
                     {
-                        s_logger.Debug($"'{action}': Appointment '{appointment.Subject}' '{appointment.EntryID}' ");
+                        var (lastChangeTime, changeSourceHint) = AppointmentItemUtils.GetLastChangeTimeWithSource(appointment);
                         entryId = new AppointmentId(new CalDavSynchronizer.Implementation.Events.AppointmentId(
                             appointment.EntryID, appointment.GlobalAppointmentID ?? String.Empty),
-                            AppointmentItemUtils.GetLastChangeTime(appointment),
+                            lastChangeTime,
                             wasDeleted);
+
+                        if (action == ItemAction.Change)
+                        {
+                            var syncWriteHint = SyncWriteTracker.IsSyncWrite(appointment.EntryID) ? " [ChangeSourceHint=SyncWrite]" : "";
+                            var uid = AppointmentItemUtils.ExtractUidFromGlobalId(appointment.GlobalAppointmentID);
+                            s_logger.Info(
+                                $"CHANGE Appointment EntryID='{appointment.EntryID}' UID='{uid ?? "(null)"}' " +
+                                $"Subject='{appointment.Subject}' " +
+                                $"Start={appointment.Start} End={appointment.End} " +
+                                $"LastChangeTime={lastChangeTime} ChangeSourceHint={changeSourceHint}{syncWriteHint}");
+                        }
+                        else if (s_logger.IsDebugEnabled)
+                        {
+                            s_logger.Debug(
+                                $"Appointment '{action}' received for '{appointment.EntryID}' " +
+                                $"(MeetingStatus={appointment.MeetingStatus}).");
+                        }
 
                         if (!wasDeleted &&
                             !string.IsNullOrEmpty(appointment.GlobalAppointmentID) &&
@@ -68,10 +85,20 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.FolderMonitor
                             {
                                 if (!string.IsNullOrEmpty(appointment.Organizer) && appointment.Recipients.Count > 0)
                                 {
-                                    s_logger.Info(
-                                        $"Incoming invite detected, setting MeetingStatus=olMeetingReceived for '{appointment.EntryID}'.");
-                                    appointment.MeetingStatus = Outlook.OlMeetingStatus.olMeetingReceived;
-                                    appointment.Save();
+                                    var organizerEmail = appointment.GetOrganizerEmailAddress(GenSync.Logging.NullEntitySynchronizationLogger.Instance);
+                                    var accountEmail = ((Outlook.Folder)appointment.Parent).GetAccount();
+
+                                    if (!string.IsNullOrEmpty(organizerEmail) && !string.IsNullOrEmpty(accountEmail)
+                                        && EmailAddress.AreSame(organizerEmail, accountEmail))
+                                    {
+                                        s_logger.Info($"Skipping MeetingStatus override for '{appointment.EntryID}': user is the organizer.");
+                                    }
+                                    else
+                                    {
+                                        s_logger.Info($"Incoming invite detected, setting MeetingStatus=olMeetingReceived for '{appointment.EntryID}'.");
+                                        appointment.MeetingStatus = Outlook.OlMeetingStatus.olMeetingReceived;
+                                        appointment.Save();
+                                    }
                                 }
                                 else
                                 {
@@ -123,7 +150,9 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer.FolderMonitor
                     {
                         var uid = AppointmentItemUtils.ExtractUidFromGlobalId(appointment.GlobalAppointmentID);
                         if (!String.IsNullOrEmpty(uid))
+                        {
                             _invitesInfo.OnInviteDeleted(uid);
+                        }
                     }
                     OnItemChanged(entryId);
                 }

@@ -19,6 +19,7 @@ using log4net;
 using Microsoft.Office.Interop.Outlook;
 using NodaTime;
 using Y360OutlookConnector.Configuration;
+using Y360OutlookConnector.Synchronization.Synchronizer;
 using Y360OutlookConnector.Utilities;
 using Exception = Microsoft.Office.Interop.Outlook.Exception;
 using Period = DDay.iCal.Period;
@@ -44,6 +45,8 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         private const string PR_GLOBAL_OBJECT_ID = "http://schemas.microsoft.com/mapi/id/{6ED8DA90-450B-101B-98DA-00AA003F1305}/00030102";
         private const string PR_CLEAN_GLOBAL_OBJECT_ID = "http://schemas.microsoft.com/mapi/id/{6ED8DA90-450B-101B-98DA-00AA003F1305}/00230102";
         private const string PR_FINVITED = "http://schemas.microsoft.com/mapi/id/{00062002-0000-0000-C000-000000000046}/8229000B";
+        private const string DeferredRespondMarkerPropertyAccessor = "http://schemas.microsoft.com/mapi/string/{14B893D3-5A3E-4D11-93A5-1881742AE0F1}/Y360DeferredRespondUtc";
+        private static readonly TimeSpan DeferredRespondMarkerTtl = TimeSpan.FromMinutes(15);
 
         private readonly int _outlookMajorVersion;
 
@@ -57,6 +60,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         private readonly IOutlookTimeZones _outlookTimeZones;
         private readonly ICalendarResourceResolver _calendarResourceResolver;
         private readonly FailedEntityTracker _failedEntityTracker;
+        private readonly DeferredRespondStorage _deferredRespondStorage;
 
         public EventEntityMapper(
             string outlookEmailAddress,
@@ -69,7 +73,8 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             ITimeZone configuredEventTimeZoneOrNull,
             IOutlookTimeZones outlookTimeZones,
             ICalendarResourceResolver calendarResourceResolver,
-            FailedEntityTracker failedEntityTracker)
+            FailedEntityTracker failedEntityTracker,
+            DeferredRespondStorage deferredRespondStorage)
         {
             _calendarResourceResolver = calendarResourceResolver ?? throw new ArgumentNullException(nameof(calendarResourceResolver));
             _outlookEmailAddress = outlookEmailAddress;
@@ -84,6 +89,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             string outlookMajorVersionString = outlookApplicationVersion.Split(new char[] { '.' })[0];
             _outlookMajorVersion = Convert.ToInt32(outlookMajorVersionString);
             _failedEntityTracker = failedEntityTracker;
+            _deferredRespondStorage = deferredRespondStorage;
         }
 
         public static EventEntityMapper Create(
@@ -97,18 +103,19 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             ITimeZone configuredEventTimeZoneOrNull,
             IOutlookTimeZones outlookTimeZones,
             ICalendarResourceResolver calendarResourceResolver,
-            FailedEntityTracker failedEntityTracker)
+            FailedEntityTracker failedEntityTracker,
+            DeferredRespondStorage deferredRespondStorage)
         {
             return new EventEntityMapper(outlookEmailAddress, serverEmailAddress, serverUserCommonName,
                 localTimeZoneId, outlookApplicationVersion, timeZoneCache, configuration,
-                configuredEventTimeZoneOrNull, outlookTimeZones, calendarResourceResolver, failedEntityTracker);
+                configuredEventTimeZoneOrNull, outlookTimeZones, calendarResourceResolver, failedEntityTracker, deferredRespondStorage);
         }
 
-        public async Task<IICalendar> Map1To2(IAppointmentItemWrapper sourceWrapper, IICalendar existingTargetCalender, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
+        public async Task<IICalendar> Map1To2(IAppointmentItemWrapper sourceWrapper, IICalendar existingTargetCalendar, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
         {
-            var newTargetCalender = new iCalendar();
+            var newTargetCalendar = new iCalendar();
 
-            if (AppConfig.IsAlwaysSkipInvitationEmails && existingTargetCalender.IsNew())
+            if (AppConfig.IsAlwaysSkipInvitationEmails && existingTargetCalendar.IsNew())
             {
                 var organizerEmail = sourceWrapper.Inner.GetOrganizerEmailAddress(logger);
 
@@ -117,7 +124,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                     // Это создание новой встречи. Организатором является сам пользователь.
                     // Событие отсутствует в календаре, но присутствует в Outlook и это новое событие
                     // Добавляем свойство, что не требуется посылать приглашение
-                    newTargetCalender.AddSkipInvitationProperty();
+                    newTargetCalendar.AddSkipInvitationProperty();
                 }                
             }
             
@@ -146,7 +153,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                     {
                         if (_localTimeZoneId == startTimeZoneID && _configuredEventTimeZoneOrNull != null)
                         {
-                            newTargetCalender.TimeZones.Add(_configuredEventTimeZoneOrNull);
+                            newTargetCalendar.TimeZones.Add(_configuredEventTimeZoneOrNull);
                             startIcalTimeZone = _configuredEventTimeZoneOrNull;
                         }
                         else
@@ -155,7 +162,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                             if (startIanaTzId != null)
                                 startIcalTimeZone = await _timeZoneCache.GetByTzIdOrNull(startIanaTzId);
                             if (startIcalTimeZone != null)
-                                newTargetCalender.TimeZones.Add(startIcalTimeZone);
+                                newTargetCalendar.TimeZones.Add(startIcalTimeZone);
                         }
                     }
                     else
@@ -163,7 +170,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         var startTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(startTimeZoneID);
                         startIcalTimeZone = iCalTimeZone.FromSystemTimeZone(startTimeZoneInfo, new DateTime(1970, 1, 1), false);
                         CalendarDataPreprocessor.FixTimeZoneDSTRRules(startTimeZoneInfo, startIcalTimeZone);
-                        newTargetCalender.TimeZones.Add(startIcalTimeZone);
+                        newTargetCalendar.TimeZones.Add(startIcalTimeZone);
                     }
 
                     if (endTimeZoneID != startTimeZoneID)
@@ -172,7 +179,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         {
                             if (_localTimeZoneId == endTimeZoneID && _configuredEventTimeZoneOrNull != null)
                             {
-                                newTargetCalender.TimeZones.Add(_configuredEventTimeZoneOrNull);
+                                newTargetCalendar.TimeZones.Add(_configuredEventTimeZoneOrNull);
                                 endIcalTimeZone = _configuredEventTimeZoneOrNull;
                             }
                             else
@@ -181,7 +188,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                                 if (endIanaTzId != null)
                                     endIcalTimeZone = await _timeZoneCache.GetByTzIdOrNull(endIanaTzId);
                                 if (endIcalTimeZone != null)
-                                    newTargetCalender.TimeZones.Add(endIcalTimeZone);
+                                    newTargetCalendar.TimeZones.Add(endIcalTimeZone);
                             }
                         }
                         else
@@ -190,7 +197,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
                             endIcalTimeZone = iCalTimeZone.FromSystemTimeZone(endTimeZoneInfo, new DateTime(1970, 1, 1), false);
                             CalendarDataPreprocessor.FixTimeZoneDSTRRules(endTimeZoneInfo, endIcalTimeZone);
-                            newTargetCalender.TimeZones.Add(endIcalTimeZone);
+                            newTargetCalendar.TimeZones.Add(endIcalTimeZone);
                         }
                     }
                     else
@@ -205,7 +212,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 }
             }
 
-            var existingTargetEvent = existingTargetCalender.Events.FirstOrDefault(e => e.RecurrenceID == null);
+            var existingTargetEvent = existingTargetCalendar.Events.FirstOrDefault(e => e.RecurrenceID == null);
 
             var newTargetEvent = new Event();
            
@@ -214,21 +221,25 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             else if (_configuration.UseGlobalAppointmentID)
                 newTargetEvent.UID = AppointmentItemUtils.ExtractUidFromGlobalId(sourceWrapper.Inner.GlobalAppointmentID);
 
-            newTargetCalender.Events.Add(newTargetEvent);
+            LogOutgoingAttendeeDiagnostics("master", sourceWrapper.Inner, existingTargetEvent, newTargetEvent);
 
-            await Map1To2(sourceWrapper.Inner, newTargetEvent, false, startIcalTimeZone, endIcalTimeZone, logger, context);
+            newTargetCalendar.Events.Add(newTargetEvent);
 
-            for (int i = 0, newSequenceNumber = existingTargetCalender.Events.Count > 0 ? existingTargetCalender.Events.Max(e => e.Sequence) + 1 : 0;
-                i < newTargetCalender.Events.Count;
+            await Map1To2(sourceWrapper.Inner, newTargetEvent, false, startIcalTimeZone, endIcalTimeZone, logger, context, existingTargetCalendar);
+
+            LogSequenceDiagnostics(newTargetCalendar, existingTargetCalendar);
+
+            for (int i = 0, newSequenceNumber = existingTargetCalendar.Events.Count > 0 ? existingTargetCalendar.Events.Max(e => e.Sequence) + 1 : 0;
+                i < newTargetCalendar.Events.Count;
                 i++, newSequenceNumber++)
             {
-                newTargetCalender.Events[i].Sequence = newSequenceNumber;
+                newTargetCalendar.Events[i].Sequence = newSequenceNumber;
             }
 
-            return newTargetCalender;
+            return newTargetCalendar;
         }
 
-        private async Task Map1To2(AppointmentItem source, IEvent target, bool isRecurrenceException, ITimeZone startIcalTimeZone, ITimeZone endIcalTimeZone, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
+        private async Task Map1To2(AppointmentItem source, IEvent target, bool isRecurrenceException, ITimeZone startIcalTimeZone, ITimeZone endIcalTimeZone, IEntitySynchronizationLogger logger, IEventSynchronizationContext context, IICalendar existingServerCalendarOrNull)
         {
             if (source.AllDayEvent)
             {
@@ -293,15 +304,23 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
             if (_configuration.MapAttendees)
             {
-                var organizerSet = await MapAttendees1To2(source, target, logger);
-                if (!organizerSet)
-                    MapOrganizer1To2(source, target, logger);
-                EnsureOrganizerInAttendees(target);
-                MapOwnAttendeeOutlookToServer(target);
+                if (ParticipationStatusHelper.ShouldUseServerAttendeesForIncomingParticipationPush(
+                    source, existingServerCalendarOrNull, isRecurrenceException))
+                {
+                    MapAttendeesFromServerWithOwnParticipationPatch(source, target, existingServerCalendarOrNull, logger);
+                }
+                else
+                {
+                    var organizerSet = await MapAttendees1To2(source, target, logger);
+                    if (!organizerSet)
+                        MapOrganizer1To2(source, target, logger);
+                    EnsureOrganizerInAttendees(target);
+                    MapOwnAttendeeOutlookToServer(target);
+                }
             }
 
             if (!isRecurrenceException)
-                await MapRecurrance1To2(source, target, startIcalTimeZone, endIcalTimeZone, logger, context);
+                await MapRecurrance1To2(source, target, startIcalTimeZone, endIcalTimeZone, logger, context, existingServerCalendarOrNull);
 
 
             target.Class = CommonEntityMapper.MapPrivacy1To2(source.Sensitivity, _configuration.MapSensitivityPrivateToClassConfidential, _configuration.MapSensitivityPublicToDefault);
@@ -465,7 +484,6 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
             if (source.Alarms.Count == 0)
             {
-                target.ReminderSet = false;
                 return;
             }
 
@@ -760,8 +778,80 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             if (ownAttendee != null)
             {
                 ownAttendee.Value = new Uri(_serverEmailUri);
+                ownAttendee.Parameters.Remove("EMAIL");
                 ownAttendee.CommonName = _serverUserCommonName;
             }
+        }
+
+        private void MapAttendeesFromServerWithOwnParticipationPatch(
+            AppointmentItem source,
+            IEvent target,
+            IICalendar existingServerCalendarOrNull,
+            IEntitySynchronizationLogger logger)
+        {
+            var serverEvent = existingServerCalendarOrNull?.Events?.FirstOrDefault(e => e.RecurrenceID == null);
+            if (serverEvent == null)
+            {
+                return;
+            }
+
+            int outlookRecipientCount;
+            try
+            {
+                outlookRecipientCount = source.Recipients.Count;
+            }
+            catch (COMException)
+            {
+                outlookRecipientCount = -1;
+            }
+
+            s_logger.Info($"Map1To2: server-as-base ATTENDEE/ORGANIZER for incoming meeting (Outlook Recipients={outlookRecipientCount}, server ATTENDEE={serverEvent.Attendees.Count})");
+
+            if (serverEvent.Organizer != null)
+            {
+                target.Organizer = serverEvent.Organizer.Copy<Organizer>();
+            }
+
+            foreach (var serverAttendee in serverEvent.Attendees)
+            {
+                target.Attendees.Add(serverAttendee.Copy<Attendee>());
+            }
+
+            PatchOwnParticipationStatusFromOutlook(source, target, logger);
+            MapOwnAttendeeOutlookToServer(target);
+        }
+
+        private void PatchOwnParticipationStatusFromOutlook(
+            AppointmentItem source,
+            IEvent target,
+            IEntitySynchronizationLogger logger)
+        {
+            var outlookMailUri = new Uri("mailto:" + _outlookEmailAddress);
+            var serverMailUri = new Uri(_serverEmailUri);
+            var ownAttendee = target.Attendees.FirstOrDefault(a =>
+                EmailAddress.AreSame(a.Value, serverMailUri) || EmailAddress.AreSame(a.Value, outlookMailUri));
+
+            if (ownAttendee == null)
+            {
+                return;
+            }
+
+            string partStat = null;
+            foreach (Recipient recipient in source.Recipients)
+            {
+                if (IsOwnIdentity(recipient, logger))
+                {
+                    partStat = ResolveOwnParticipationStatus(source, recipient);
+                    break;
+                }
+            }
+
+            if (partStat == null)
+            {
+                partStat = MapParticipation1To2(source.ResponseStatus);
+            }
+
+            ownAttendee.ParticipationStatus = partStat;
         }
 
         private void EnsureOrganizerInAttendees(IEvent target)
@@ -814,7 +904,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             }
         }
 
-        private async Task MapRecurrance1To2(AppointmentItem source, IEvent target, ITimeZone startIcalTimeZone, ITimeZone endIcalTimeZone, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
+        private async Task MapRecurrance1To2(AppointmentItem source, IEvent target, ITimeZone startIcalTimeZone, ITimeZone endIcalTimeZone, IEntitySynchronizationLogger logger, IEventSynchronizationContext context, IICalendar existingServerCalendarOrNull)
         {
             if (source.IsRecurring)
             {
@@ -826,10 +916,25 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                     // Don't set Count if pattern has NoEndDate or invalid Occurences for some reason.
                     if (!sourceRecurrencePattern.NoEndDate && sourceRecurrencePattern.Occurrences > 0)
                     {
-                        targetRecurrencePattern.Count = sourceRecurrencePattern.Occurrences;
-                        //Until must not be set if count is set, since outlook always sets Occurrences
-                        //but sogo wants it as utc end time of the last event not only the enddate at 0000
-                        //targetRecurrencePattern.Until = sourceRecurrencePattern.PatternEndDate.Add(sourceRecurrencePattern.EndTime.TimeOfDay).ToUniversalTime();
+                        // Preserve UNTIL from server if it matches Outlook's PatternEndDate, to avoid
+                        // spurious UNTIL→COUNT conversion on roundtrip that can trigger iTIP notifications.
+                        var serverMasterEvent = existingServerCalendarOrNull?.Events?.FirstOrDefault(e => e.RecurrenceID == null);
+                        var serverUntil = serverMasterEvent?.RecurrenceRules != null && serverMasterEvent.RecurrenceRules.Count > 0
+                            ? serverMasterEvent.RecurrenceRules[0].Until : default(DateTime);
+
+                        if (serverUntil != default(DateTime) && serverUntil.Date == sourceRecurrencePattern.PatternEndDate.Date)
+                        {
+                            targetRecurrencePattern.Until = serverUntil;
+                            s_logger.Debug($"RRULE: preserving server UNTIL={serverUntil:o} instead of COUNT={sourceRecurrencePattern.Occurrences}");
+                        }
+                        else
+                        {
+                            targetRecurrencePattern.Count = sourceRecurrencePattern.Occurrences;
+                            s_logger.Debug($"RRULE: writing COUNT={sourceRecurrencePattern.Occurrences}" +
+                                (serverUntil != default(DateTime)
+                                    ? $", server UNTIL={serverUntil:o} differs from PatternEndDate={sourceRecurrencePattern.PatternEndDate:d}"
+                                    : ", no server UNTIL"));
+                        }
                     }
 
                     if (sourceRecurrencePattern.Interval >= 1)
@@ -940,7 +1045,17 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                                     var targetException = new Event();
                                     target.Calendar.Events.Add(targetException);
                                     targetException.UID = target.UID;
-                                    await Map1To2(wrapper.Inner, targetException, true, startIcalTimeZone, endIcalTimeZone, logger, context);
+
+                                    var serverEx = TryFindServerExceptionForOutlook(
+                                                                            existingServerCalendarOrNull,
+                                                                            source,
+                                                                            sourceException,
+                                                                            sourceZone,
+                                                                            startIcalTimeZone,
+                                                                            _configuration);
+                                    LogOutgoingAttendeeDiagnostics("exception", wrapper.Inner, serverEx, targetException);
+
+                                    await Map1To2(wrapper.Inner, targetException, true, startIcalTimeZone, endIcalTimeZone, logger, context, null);
 
                                     // Organizer must be the same for all components to avoid SameOrganizerForAllComponentsException
                                     if (target.Organizer != null)
@@ -1416,7 +1531,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                     using (var exceptionWrapper = new AppointmentItemWrapper(targetException, _ => { throw new InvalidOperationException("cannot reload exception item"); }))
 
                     {
-                        Map2To1(recurranceException, new IEvent[] { }, exceptionWrapper, true, logger, context);
+                        Map2To1(recurranceException, new IEvent[] { }, exceptionWrapper, true, false, logger, context);
 
                         if (_outlookMajorVersion >= 15 && recurranceException.Organizer != null &&
                             recurranceException.Attendees.Count > 0)
@@ -1457,9 +1572,11 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             foreach (var recipient in source.Recipients.ToSafeEnumerable<Recipient>())
             {
                 string recipientMailAddressOrNull = null;
+                var resolveSuccess = false;
                 try
                 {
-                    if (recipient.Resolve())
+                    resolveSuccess = recipient.Resolve();
+                    if (resolveSuccess)
                     {
                         using (var entryWrapper = GenericComObjectWrapper.Create(recipient.AddressEntry))
                         {
@@ -1474,6 +1591,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 }
 
                 var nameWithoutEmail = OutlookUtility.RemoveEmailFromName(recipient);
+                nameWithoutEmail = Regex.Replace(nameWithoutEmail, @"( <[^<>]*>)+$", string.Empty);
 
                 if ((OlMeetingRecipientType) recipient.Type == OlMeetingRecipientType.olResource)
                 {
@@ -1509,6 +1627,16 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 }
                 else if (!IsOwnIdentity(recipientMailAddressOrNull))
                 {
+                    // Guard: if this is the organizer of own meeting but IsOwnIdentity returned false
+                    // (e.g. email cache miss), don't add as regular attendee to avoid duplicating the
+                    // organizer in ATTENDEE. EnsureOrganizerInAttendees will add them correctly.
+                    // We still allow the loop to continue so SetOrganizer can be called below.
+                    var skipAttendee = (OlMeetingRecipientType)recipient.Type == OlMeetingRecipientType.olOrganizer && source.MeetingStatus == OlMeetingStatus.olMeeting;
+                    if (skipAttendee)
+                    {
+                        s_logger.Warn($"Skipping organizer '{recipient.Address}' as regular attendee (IsOwnIdentity=false likely due to cache miss, MeetingStatus=olMeeting).");
+                    }
+
                     var attendee = new Attendee();
 
                     if (!string.IsNullOrEmpty(recipient.Address))
@@ -1520,14 +1648,61 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         }
                     }
 
+                    if (attendee.Value == null)
+                    {
+                        var emailFromName = TryExtractEmailFromRecipientName(recipient.Name);
+                        if (emailFromName != null)
+                        {
+                            var mailUrl = CreateMailUriOrNull(emailFromName, logger);
+                            if (mailUrl != null)
+                            {
+                                attendee.Value = new Uri(mailUrl);
+                                s_logger.Info($"Recovered attendee email from recipient name '{emailFromName}'.");
+                            }
+                        }
+                    }
+
+                    // Second fallback: try to extract email from recipient.Address if it is in
+                    // "Name <email>" format (Outlook may store it this way when Resolve() fails).
+                    if (attendee.Value == null && !string.IsNullOrEmpty(recipient.Address))
+                    {
+                        var emailFromAddress = TryExtractEmailFromRecipientName(recipient.Address);
+                        if (emailFromAddress != null)
+                        {
+                            var mailUrl = CreateMailUriOrNull(emailFromAddress, logger);
+                            if (mailUrl != null)
+                            {
+                                attendee.Value = new Uri(mailUrl);
+                                s_logger.Info($"Recovered attendee email from recipient address field '{emailFromAddress}'.");
+                            }
+                        }
+                    }
+
+                    if (attendee.Value == null)
+                    {
+                        if (!skipAttendee)
+                        {
+                            s_logger.Warn($"Can't determine mail address: Name='{recipient.Name}', Address='{recipient.Address}', Type={recipient.Type}, Resolve={resolveSuccess}.");
+                            logger.LogWarning($"Can't determine mail address of attendee '{recipient.Name}' and no fallback email found in recipient name.");
+                        }
+                        continue;
+                    }
+
                     attendee.ParticipationStatus = MapParticipation1To2(recipient.MeetingResponseStatus);
                     attendee.CommonName = nameWithoutEmail;
                     attendee.Role = MapAttendeeType1To2((OlMeetingRecipientType) recipient.Type);
 
                     attendee.RSVP = true;
                     if (_configuration.ScheduleAgentClient)
+                    {
                         attendee.Parameters.Add("SCHEDULE-AGENT", "CLIENT");
-                    target.Attendees.Add(attendee);
+                    }
+                    if (!skipAttendee)
+                    {
+                        target.Attendees.Add(attendee);
+                    }
+
+
                 }
                 else
                 {
@@ -1545,7 +1720,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         }
 
                         ownAttendee.CommonName = nameWithoutEmail;
-                        ownAttendee.ParticipationStatus = (source.MeetingStatus == OlMeetingStatus.olMeetingReceivedAndCanceled) ? "DECLINED" : MapParticipation1To2(source.ResponseStatus);
+                        ownAttendee.ParticipationStatus = ResolveOwnParticipationStatus(source, recipient);
                         ownAttendee.Role = MapAttendeeType1To2((OlMeetingRecipientType) recipient.Type);
                         if (_configuration.ScheduleAgentClient)
                             ownAttendee.Parameters.Add("SCHEDULE-AGENT", "CLIENT");
@@ -1645,8 +1820,14 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
         public Task<IAppointmentItemWrapper> Map2To1(IICalendar sourceCalendar, IAppointmentItemWrapper target, IEntitySynchronizationLogger logger, IEventSynchronizationContext context)
         {
+            //XXX Причина дублей: ранний Respond() на свежесозданном Outlook item может спровоцировать повторное пересоздание встречи.
+            //XXX Исправление в маппере: для Accept используем defer+marker и позже выполняем безопасный дожим Respond().
+            //XXX В этом маппинге происходит "финализация" invite в Outlook:
+            //XXX здесь мы решаем, вызывать ли Respond() сразу или отложить его через marker,
+            //XXX чтобы одновременно убрать дубликаты и сохранить корректные кнопки/визуальный статус встречи.
             IEvent sourceMasterEvent = null;
             IReadOnlyCollection<IEvent> sourceExceptionEvents;
+            var isFreshlyCreatedTarget = target.Inner.EntryID == null;
 
             var sourceEvents = sourceCalendar.Events;
 
@@ -1708,7 +1889,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 }
             }
 
-            return Task.FromResult(Map2To1(sourceMasterEvent, sourceExceptionEvents, target, false, logger, context));
+            return Task.FromResult(Map2To1(sourceMasterEvent, sourceExceptionEvents, target, false, isFreshlyCreatedTarget, logger, context));
         }
 
         private void AddMasterEvent(IICalendar calendar)
@@ -1788,6 +1969,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             IReadOnlyCollection<IEvent> recurrenceExceptionsOrNull,
             IAppointmentItemWrapper targetWrapper,
             bool isRecurrenceException,
+            bool isFreshlyCreatedTarget,
             IEntitySynchronizationLogger logger,
             IEventSynchronizationContext context)
         {
@@ -1941,46 +2123,91 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 {
                     var response = MapParticipation2ToMeetingResponse(ownSourceAttendee.ParticipationStatus);
                     var mappedResponseStatus = MapParticipation2To1(ownSourceAttendee.ParticipationStatus);
+                    //XXX hasDeferredRespond проверяет два источника:
+                    //XXX 1) MAPI-свойство на item - для случаев, когда mapper сам поставил маркер (freshly created Accept);
+                    //XXX 2) DeferredRespondStorage по UID - для случаев UID-конвертации из интерцептора (без Save() и без MAPI-свойства).
+                    var hasDeferredRespond = IsDeferredRespondPending(targetWrapper.Inner, out var deferredRespondAtUtc);
+                    if (!hasDeferredRespond && _deferredRespondStorage != null && !string.IsNullOrEmpty(source.UID))
+                    {
+                        DateTime storageMarkedAt;
+                        if (_deferredRespondStorage.IsPending(source.UID, out storageMarkedAt))
+                        {
+                            hasDeferredRespond = true;
+                            deferredRespondAtUtc = storageMarkedAt;
+                        }
+                    }
 
                     // show received meetings without response as tentative
                     if (response == null && !source.Properties.ContainsKey("X-MICROSOFT-CDO-BUSYSTATUS"))
+                    {
                         targetWrapper.Inner.BusyStatus = OlBusyStatus.olTentative;
+                    }
 
                     if (response == null)
                     {
-                        s_logger.Debug(
-                            $"Skip meeting response (no mapping) for UID '{source.UID}'");
+                        if (hasDeferredRespond)
+                        {
+                            ClearDeferredRespondPending(targetWrapper.Inner, source.UID);
+                        }
+                        s_logger.Debug($"Skip meeting response (no mapping) for UID '{source.UID}'");
                     }
-                    else if (mappedResponseStatus == targetWrapper.Inner.ResponseStatus)
+                    //XXX Если marker активен, просто "already matches" недостаточно: нужно все равно пройти Respond(),
+                    //XXX иначе Outlook может оставить старый визуальный статус/кнопки даже при правильном ResponseStatus.
+                    else if (mappedResponseStatus == targetWrapper.Inner.ResponseStatus && !hasDeferredRespond)
                     {
-                        s_logger.Debug(
-                            $"Skip meeting response (already matches) for UID '{source.UID}'");
+                        s_logger.Debug($"Skip meeting response (already matches) for UID '{source.UID}'");
+                    }
+                    //XXX Деферим только Accept на только что созданном Outlook item.
+                    //XXX Это снижает риск дубликатов от раннего Respond(), но не ломает сценарии Tentative/Decline.
+                    else if (isFreshlyCreatedTarget && !isRecurrenceException && response == OlMeetingResponse.olMeetingAccepted && MarkDeferredRespondPending(targetWrapper.Inner))
+                    {
+                        s_logger.Debug($"Defer applying accepted meeting response for UID '{source.UID}' because the target is freshly created in this sync pass.");
                     }
                     else
                     {
-                        s_logger.Debug(
-                            $"Applying meeting response for UID '{source.UID}'");
+                        if (hasDeferredRespond)
+                        {
+                            s_logger.Debug($"Applying deferred meeting response for UID '{source.UID}' (deferrad at {deferredRespondAtUtc:o}.");
+                        }
+                        s_logger.Debug($"Applying meeting response for UID '{source.UID}'");
 
                         if (response == OlMeetingResponse.olMeetingDeclined)
                         {
                             targetWrapper.Inner.MeetingStatus = OlMeetingStatus.olMeetingReceivedAndCanceled;
+                            if (hasDeferredRespond)
+                            {
+                                ClearDeferredRespondPending(targetWrapper.Inner, source.UID);
+                            }
                         }
                         else
                         {
-                            try
+                            if (targetWrapper.Inner.MeetingStatus == OlMeetingStatus.olNonMeeting)
                             {
-                                using (var newMeetingItem = GenericComObjectWrapper.Create(targetWrapper.Inner.Respond(response.Value)))
-                                {
-                                    var newAppointment = newMeetingItem.Inner.GetAssociatedAppointment(false);
-                                    targetWrapper.Replace(newAppointment);
-                                }
-                                s_logger.Debug(
-                                    $"Applied meeting response for UID '{source.UID}'");
+                                s_logger.Debug($"Skip meeting response for UID '{source.UID}' because target is non-meeting");
                             }
-                            catch (System.Exception ex)
+                            else
                             {
-                                s_logger.Warn("Can't respond to meeting invite.", ex);
-                                logger.LogWarning("Can't respond to meeting invite.", ex);
+                                try
+                                {
+                                    using (var newMeetingItem = GenericComObjectWrapper.Create(targetWrapper.Inner.Respond(response.Value)))
+                                    {
+                                        var newAppointment = newMeetingItem.Inner.GetAssociatedAppointment(false);
+                                        if (newAppointment != null)
+                                        {
+                                            targetWrapper.Replace(newAppointment);
+                                        }
+                                    }
+                                    if (hasDeferredRespond)
+                                    {
+                                        ClearDeferredRespondPending(targetWrapper.Inner, source.UID);
+                                    }
+                                    s_logger.Debug($"Applied meeting response for UID '{source.UID}'");
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    s_logger.Warn("Can't respond to meeting invite.", ex);
+                                    logger.LogWarning("Can't respond to meeting invite.", ex);
+                                }
                             }
                         }
                     }
@@ -2048,7 +2275,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                 target.Body = source.Description;
                 if (!string.IsNullOrWhiteSpace(source.Description) && IsBodyBroken(source.Description, target.Body))
                 {
-                    s_logger.Error($"Error on mapping Description, using RTF bypass. \r\n Calendar: {source.Description} \r\n Outlook: {target.Body}");
+                    s_logger.Info($"Error on mapping Description, using RTF bypass. \r\n Calendar: {source.Description} \r\n Outlook: {target.Body}");
                     target.RTFBody = ConvertTextToRtf(source.Description);
                     Telemetry.Signal(Telemetry.ConfirmedBugEvent, "error_mapping_description_2To1");
                 }
@@ -2133,6 +2360,15 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         private void MapAttendeesAndOrganizer2To1(IEvent source, AppointmentItem target, IEntitySynchronizationLogger logger)
         {
             var recipientsToDispose = new HashSet<Recipient>();
+            int recipientsBefore;
+            try 
+            {
+                recipientsBefore = target.Recipients.Count;
+            }
+            catch (COMException)
+            {
+                recipientsBefore = -1;
+            }
 
             try
             {
@@ -2141,88 +2377,9 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
                 // Fix some issues in the attendees list, before processing.
 
-                // Remove organizer from attendees, if there is one there
-                var attendees = source.Attendees.Select(x => x.Copy<Attendee>()).ToList();
+                string sourceOrganizerEmail = string.Empty;
                 if (source.Organizer != null && source.Organizer.Value != null)
                 {
-                    var organizerIndex = attendees.FindIndex(x => EmailAddress.AreSame(x.Value, source.Organizer.Value));
-                    if (organizerIndex != -1)
-                        attendees.RemoveAt(organizerIndex);
-                }
-
-                // Replace email of the owner attendee with email from the Outlook account
-                var serverEmailUrl = new Uri(_serverEmailUri);
-                var ownAttendee = attendees.Find(x => EmailAddress.AreSame(x.Value, serverEmailUrl));
-                if (ownAttendee != null)
-                {
-                    attendees.Remove(ownAttendee);
-                    attendees.Add(new Attendee
-                    {
-                        Role = ownAttendee.Role,
-                        Value = new Uri("mailto:" + _outlookEmailAddress),
-                        Type = ownAttendee.Type,
-                        CommonName = ownAttendee.CommonName
-                    });
-                }
-
-                // Now let's process attendees list
-
-                foreach (var attendee in attendees)
-                {
-                    Recipient targetRecipient = null;
-
-                    var attendeeEmail = string.Empty;
-                    if (attendee.Parameters.ContainsKey("EMAIL"))
-                    {
-                        attendeeEmail = attendee.Parameters.Get("EMAIL");
-                        if (!attendeeEmail.StartsWith("mailto:", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            attendeeEmail = "mailto:" + attendeeEmail;
-                        }
-                    }
-                    else if (attendee.Value != null && StringComparer.InvariantCultureIgnoreCase.Compare(attendee.Value.Scheme, "mailto") == 0)
-                    {
-                        try
-                        {
-                            attendeeEmail = attendee.Value.ToString();
-                        }
-                        catch (UriFormatException ex)
-                        {
-                            s_logger.Warn("Ignoring invalid Uri in attendee email.", ex);
-                            logger.LogWarning("Ignoring invalid Uri in attendee email.", ex);
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(attendeeEmail))
-                    {
-                        if (!indexByEmailAddresses.TryGetValue(attendeeEmail, out targetRecipient))
-                        {
-                            var recipientName = CreateOutlookRecipientName(
-                                attendeeEmail.Substring(s_mailtoSchemaLength), attendee.CommonName);
-
-                            targetRecipient = target.Recipients.Add(recipientName);
-                        }
-                    }
-                    else if (!string.IsNullOrEmpty(attendee.CommonName))
-                    {
-                        targetRecipient = target.Recipients.Add(attendee.CommonName);
-                    }
-
-                    if (targetRecipient != null)
-                    {
-                        recipientsToDispose.Add(targetRecipient);
-                        targetRecipientsWhichShouldRemain.Add(targetRecipient);
-                        targetRecipient.Type = (int) MapAttendeeType2To1(attendee.Role);
-                        if (attendee.Type == "RESOURCE" || attendee.Type == "ROOM")
-                            targetRecipient.Type = (int) OlMeetingRecipientType.olResource;
-                        targetRecipient.Resolve();
-                    }
-                }
-
-                if (source.Organizer != null && source.Organizer.Value != null)
-                {
-                    string sourceOrganizerEmail = string.Empty;
-
                     try
                     {
                         sourceOrganizerEmail = source.Organizer.Value.ToString().Substring(s_mailtoSchemaLength);
@@ -2232,88 +2389,89 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         s_logger.Warn("Ignoring invalid Uri in organizer email.", ex);
                         logger.LogWarning("Ignoring invalid Uri in organizer email.", ex);
                     }
+                }
 
-                    if (!EmailAddress.AreSame(sourceOrganizerEmail, _outlookEmailAddress))
+                var sourceAttendeesSnapshot = source.Attendees.Select(x => x.Copy<Attendee>()).ToList();
+                var attendees = PrepareAttendeesList(sourceAttendeesSnapshot, source, logger, out var distinctEmailsAfterOrganizerDedup);
+                WarnIfPrepLostDistinctAttendees(distinctEmailsAfterOrganizerDedup, attendees, logger);
+
+                var isIncomingInvite = source.Organizer != null
+                                       && source.Organizer.Value != null
+                                       && !EmailAddress.AreSame(sourceOrganizerEmail, _outlookEmailAddress);
+
+                if (isIncomingInvite)
+                {
+                    target.MeetingStatus = OlMeetingStatus.olMeetingReceived;
+                    SetupIncomingMeetingOrganizer(
+                        source,
+                        target,
+                        sourceOrganizerEmail,
+                        targetRecipientsWhichShouldRemain,
+                        recipientsToDispose,
+                        logger);
+                    indexByEmailAddresses = GetOutlookRecipientsByEmailAddressesOrName(target, recipientsToDispose, logger);
+
+                    foreach (var attendee in attendees)
                     {
-                        Recipient targetRecipient = null;
+                        TryMapServerAttendeeToOutlookRecipient(
+                            attendee,
+                            target,
+                            indexByEmailAddresses,
+                            targetRecipientsWhichShouldRemain,
+                            recipientsToDispose,
+                            logger,
+                            logActions: false,
+                            actionPrefix: string.Empty);
+                    }
 
-                        target.MeetingStatus = OlMeetingStatus.olMeetingReceived;
+                    indexByEmailAddresses = GetOutlookRecipientsByEmailAddressesOrName(target, recipientsToDispose, logger);
+                    VerifyAndRepairIncomingAttendees(
+                        attendees,
+                        target,
+                        indexByEmailAddresses,
+                        targetRecipientsWhichShouldRemain,
+                        recipientsToDispose,
+                        logger);
+                }
+                else
+                {
+                    foreach (var attendee in attendees)
+                    {
+                        TryMapServerAttendeeToOutlookRecipient(
+                            attendee,
+                            target,
+                            indexByEmailAddresses,
+                            targetRecipientsWhichShouldRemain,
+                            recipientsToDispose,
+                            logger,
+                            logActions: false,
+                            actionPrefix: string.Empty);
+                    }
 
-                        if (!string.IsNullOrEmpty(sourceOrganizerEmail))
+                    if (source.Organizer != null && source.Organizer.Value != null)
+                    {
+                        if (target.Recipients.Count > 0)
                         {
-                            var recipientName = CreateOutlookRecipientName(
-                                sourceOrganizerEmail, source.Organizer.CommonName);
-
-                            targetRecipient = target.Recipients.Add(recipientName);
-                        }
-                        else if (!string.IsNullOrEmpty(source.Organizer.CommonName))
-                        {
-                            targetRecipient = target.Recipients.Add(source.Organizer.CommonName);
-                        }
-
-                        if (targetRecipient != null)
-                        {
-                            recipientsToDispose.Add(targetRecipient);
-                            targetRecipientsWhichShouldRemain.Add(targetRecipient);
-                            targetRecipient.Type = (int) OlMeetingRecipientType.olOrganizer;
+                            target.MeetingStatus = OlMeetingStatus.olMeeting;
 
                             using (var oPa = GenericComObjectWrapper.Create(target.PropertyAccessor))
                             {
-                                string organizerID = null;
-
-                                if (targetRecipient.Resolve())
+                                if (oPa.Inner != null)
                                 {
-                                    using (var organizerAddressEntry = GenericComObjectWrapper.Create(targetRecipient.AddressEntry))
-                                    {
-                                        organizerID = organizerAddressEntry.Inner != null ? organizerAddressEntry.Inner.ID : null;
-                                    }
-                                }
-
-                                if (organizerID != null && oPa.Inner != null)
-                                {
-                                    var propertyTagsSentRepresenting = new object[] {PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID};
-                                    var propertyTagsSender = new object[] {PR_SENDER_NAME, PR_SENDER_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENDER_ENTRYID};
-                                    object[] propertyValues;
-
-                                    propertyValues = new object[] {targetRecipient.Name, sourceOrganizerEmail, "SMTP", oPa.Inner.StringToBinary(organizerID)};
-
                                     try
                                     {
-                                        oPa.Inner.SetProperties(propertyTagsSentRepresenting, propertyValues);
-
-                                        if (_outlookMajorVersion >= 15)
-                                        {
-                                            oPa.Inner.SetProperties(propertyTagsSender, propertyValues);
-
-                                            targetRecipientsWhichShouldRemain.Remove(targetRecipient);
-                                        }
+                                        oPa.Inner.SetProperty(PR_FINVITED, true);
                                     }
                                     catch (COMException ex)
                                     {
-                                        s_logger.Warn("Could not set property PR_SENDER_* for organizer", ex);
-                                        logger.LogWarning("Could not set property PR_SENDER_* for organizer", ex);
+                                        s_logger.Warn("Could not set property PR_FINVITED for appointment", ex);
                                     }
                                 }
                             }
                         }
-                    }
-                    else if (target.Recipients.Count > 0)
-                    {
-                        target.MeetingStatus = OlMeetingStatus.olMeeting;
-
-                        using (var oPa = GenericComObjectWrapper.Create(target.PropertyAccessor))
+                        else
                         {
-                            if (oPa.Inner != null)
-                            {
-                                try
-                                {
-                                    oPa.Inner.SetProperty(PR_FINVITED, true);
-                                }
-                                catch (COMException ex)
-                                {
-                                    s_logger.Warn("Could not set property PR_FINVITED for appointment", ex);
-                                }
-                            }
+                            target.MeetingStatus = OlMeetingStatus.olNonMeeting;
                         }
                     }
                     else
@@ -2321,25 +2479,548 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         target.MeetingStatus = OlMeetingStatus.olNonMeeting;
                     }
                 }
-                else
-                {
-                    target.MeetingStatus = OlMeetingStatus.olNonMeeting;
-                }
 
-                for (int i = target.Recipients.Count; i > 0; i--)
+                if (!ParticipationStatusHelper.IsIncomingMeeting(target))
                 {
-                    var recipient = target.Recipients[i];
-                    recipientsToDispose.Add(recipient);
-                    if (!IsOwnIdentity(recipient, logger))
+                    for (int i = target.Recipients.Count; i > 0; i--)
                     {
-                        if (!targetRecipientsWhichShouldRemain.Contains(recipient))
-                            target.Recipients.Remove(i);
+                        var recipient = target.Recipients[i];
+                        recipientsToDispose.Add(recipient);
+                        if (!IsOwnIdentity(recipient, logger))
+                        {
+                            if (!targetRecipientsWhichShouldRemain.Contains(recipient))
+                                target.Recipients.Remove(i);
+                        }
                     }
                 }
+
+                int recipientsAfter;
+                try
+                {
+                    recipientsAfter = target.Recipients.Count;
+                }
+                catch (COMException)
+                {
+                    recipientsAfter = -1;
+                }
+
+                s_logger.Info(
+                    $"MapAttendeesAndOrganizer2To1: Recipients before={recipientsBefore} after={recipientsAfter}, " +
+                    $"incomingMeeting={ParticipationStatusHelper.IsIncomingMeeting(target)}");
             }
             finally
             {
                 recipientsToDispose.ToSafeEnumerable().ToArray();
+            }
+        }
+
+        private void SetupIncomingMeetingOrganizer(
+                    IEvent source,
+                    AppointmentItem target,
+                    string sourceOrganizerEmail,
+                    HashSet<Recipient> targetRecipientsWhichShouldRemain,
+                    HashSet<Recipient> recipientsToDispose,
+                    IEntitySynchronizationLogger logger)
+        {
+            Recipient organizerRecipient = null;
+
+            if (!string.IsNullOrEmpty(sourceOrganizerEmail))
+            {
+                organizerRecipient = TryFindRecipientByEmail(target, sourceOrganizerEmail, logger);
+                if (organizerRecipient == null)
+                {
+                    var recipientName = CreateOutlookRecipientName(
+                        sourceOrganizerEmail, source.Organizer.CommonName);
+
+                    organizerRecipient = target.Recipients.Add(recipientName);
+                    s_logger.Info($"MapAttendeesAndOrganizer2To1: organizer added, email={sourceOrganizerEmail}");
+                }
+                else
+                {
+                    s_logger.Info($"MapAttendeesAndOrganizer2To1: organizer reused, email={sourceOrganizerEmail}");
+                }
+            }
+            else if (!string.IsNullOrEmpty(source.Organizer.CommonName))
+            {
+                organizerRecipient = target.Recipients.Add(source.Organizer.CommonName);
+                s_logger.Info($"MapAttendeesAndOrganizer2To1: organizer added, cn={source.Organizer.CommonName}");
+            }
+
+            if (organizerRecipient == null)
+            {
+                s_logger.Warn("MapAttendeesAndOrganizer2To1: incoming organizer skipped (no email and no CN).");
+                logger.LogWarning("Incoming organizer skipped (no email and no CN).");
+                return;
+            }
+
+            recipientsToDispose.Add(organizerRecipient);
+            organizerRecipient.Type = (int)OlMeetingRecipientType.olOrganizer;
+
+            var organizerSenderSetViaPrSender = false;
+
+            using (var oPa = GenericComObjectWrapper.Create(target.PropertyAccessor))
+                            {
+                                string organizerID = null;
+
+                try
+                {
+                    if (organizerRecipient.Resolve())
+                    {
+                        using (var organizerAddressEntry = GenericComObjectWrapper.Create(organizerRecipient.AddressEntry))
+                        {
+                            organizerID = organizerAddressEntry.Inner != null ? organizerAddressEntry.Inner.ID : null;
+                        }
+                    }
+                }
+                catch (COMException ex)
+                {
+                    s_logger.Warn("Can't resolve organizer recipient in Server→Outlook mapping, PR_SENDER_* will not be set.", ex);
+                    logger.LogWarning("Can't resolve organizer recipient in Server→Outlook mapping", ex);
+                }
+
+                if (organizerID != null && oPa.Inner != null && !string.IsNullOrEmpty(sourceOrganizerEmail))
+                {
+                    var propertyTagsSentRepresenting = new object[] { PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID };
+                    var propertyTagsSender = new object[] { PR_SENDER_NAME, PR_SENDER_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENDER_ENTRYID };
+                    var propertyValues = new object[] { organizerRecipient.Name, sourceOrganizerEmail, "SMTP", oPa.Inner.StringToBinary(organizerID) };
+
+                    try
+                    {
+                                        oPa.Inner.SetProperties(propertyTagsSentRepresenting, propertyValues);
+
+                        if (_outlookMajorVersion >= 15)
+                        {
+                            oPa.Inner.SetProperties(propertyTagsSender, propertyValues);
+                            organizerSenderSetViaPrSender = true;
+                        }
+                    }
+                    catch (COMException ex)
+                    {
+                        s_logger.Warn("Could not set property PR_SENDER_* for organizer", ex);
+                        logger.LogWarning("Could not set property PR_SENDER_* for organizer", ex);
+                    }
+                }
+            }
+
+            if (organizerSenderSetViaPrSender && !string.IsNullOrEmpty(sourceOrganizerEmail))
+            {
+                RemoveRecipientByEmail(target, sourceOrganizerEmail, recipientsToDispose, logger);
+                s_logger.Info($"MapAttendeesAndOrganizer2To1: organizer removed from Recipients (PR_SENDER set), email={sourceOrganizerEmail}");
+            }
+            else
+            {
+                targetRecipientsWhichShouldRemain.Add(organizerRecipient);
+            }
+        }
+
+        private void VerifyAndRepairIncomingAttendees(
+            IList<Attendee> expectedAttendees,
+            AppointmentItem target,
+            Dictionary<string, Recipient> indexByEmailAddresses,
+            HashSet<Recipient> targetRecipientsWhichShouldRemain,
+            HashSet<Recipient> recipientsToDispose,
+            IEntitySynchronizationLogger logger)
+        {
+            var missingAttendees = CollectMissingExpectedAttendees(expectedAttendees, target, logger);
+
+            if (missingAttendees.Count == 0)
+            {
+                return;
+            }
+
+            s_logger.Info($"MapAttendeesAndOrganizer2To1: verify/repair missing={missingAttendees.Count}, " +
+                $"emails=[{FormatAttendeeEmails(missingAttendees, logger)}]");
+
+            foreach (var attendee in missingAttendees)
+            {
+                TryMapServerAttendeeToOutlookRecipient(
+                    attendee,
+                    target,
+                    indexByEmailAddresses,
+                    targetRecipientsWhichShouldRemain,
+                    recipientsToDispose,
+                    logger,
+                    logActions: true,
+                    actionPrefix: "repair-");
+
+                indexByEmailAddresses = GetOutlookRecipientsByEmailAddressesOrName(target, recipientsToDispose, logger);
+            }
+
+            var stillMissing = CollectMissingExpectedAttendees(expectedAttendees, target, logger);
+            if (stillMissing.Count > 0)
+            {
+                s_logger.Warn(
+                    $"MapAttendeesAndOrganizer2To1: verify/repair incomplete, still missing={stillMissing.Count}, " +
+                    $"emails=[{FormatAttendeeEmails(stillMissing, logger)}]");
+                logger.LogWarning(
+                    $"Incoming attendee repair incomplete, still missing {stillMissing.Count} attendee(s).");
+            }
+        }
+
+        private List<Attendee> CollectMissingExpectedAttendees(
+            IList<Attendee> expectedAttendees,
+            AppointmentItem target,
+            IEntitySynchronizationLogger logger)
+        {
+            var missingAttendees = new List<Attendee>();
+
+            foreach (var attendee in expectedAttendees)
+            {
+                var emailWithoutMailto = TryGetAttendeeEmailWithoutMailto(attendee, logger);
+                if (string.IsNullOrEmpty(emailWithoutMailto))
+                    continue;
+
+                if (TryFindRecipientByEmail(target, emailWithoutMailto, logger) == null)
+                    missingAttendees.Add(attendee);
+            }
+
+            return missingAttendees;
+        }
+
+        private List<Attendee> PrepareAttendeesList(
+            IList<Attendee> sourceAttendeesSnapshot,
+            IEvent source,
+            IEntitySynchronizationLogger logger,
+            out HashSet<string> distinctEmailsAfterOrganizerDedup)
+        {
+            var attendees = sourceAttendeesSnapshot.Select(x => x.Copy<Attendee>()).ToList();
+            RemoveOrganizerDuplicatesFromAttendees(attendees, source, logger);
+            distinctEmailsAfterOrganizerDedup = CollectDistinctAttendeeEmails(attendees, logger);
+
+            ReplaceOwnAttendeeEmail(attendees, logger);
+            DeduplicateAttendeesByEmail(attendees, logger);
+
+            return attendees;
+        }
+
+        private void WarnIfPrepLostDistinctAttendees(
+            HashSet<string> distinctEmailsAfterOrganizerDedup,
+            IList<Attendee> attendeesAfterPrep,
+            IEntitySynchronizationLogger logger)
+        {
+            var expectedEmails = new HashSet<string>(
+                            distinctEmailsAfterOrganizerDedup, StringComparer.OrdinalIgnoreCase);
+            NormalizeOwnAttendeeEmailsInSet(expectedEmails);
+
+            var actualEmails = CollectDistinctAttendeeEmails(attendeesAfterPrep, logger);
+            var lostEmails = new List<string>();
+            foreach (var email in expectedEmails)
+            {
+                if (!actualEmails.Contains(email))
+                    lostEmails.Add(email);
+            }
+
+            if (lostEmails.Count == 0)
+                return;
+
+            s_logger.Warn(
+                $"MapAttendeesAndOrganizer2To1: prep lost attendees, missing=[{string.Join(", ", lostEmails)}], " +
+                $"actual=[{FormatAttendeeEmails(attendeesAfterPrep, logger)}]");
+            logger.LogWarning(
+                $"Attendee prep lost {lostEmails.Count} distinct attendee(s): {string.Join(", ", lostEmails)}.");
+        }
+
+        private HashSet<string> CollectDistinctAttendeeEmails(
+                    IList<Attendee> attendees,
+                    IEntitySynchronizationLogger logger)
+        {
+            var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var attendee in attendees)
+            {
+                var email = TryGetAttendeeEmailWithoutMailto(attendee, logger);
+                if (!string.IsNullOrEmpty(email))
+                    emails.Add(email);
+            }
+
+            return emails;
+        }
+
+        private void NormalizeOwnAttendeeEmailsInSet(HashSet<string> emails)
+        {
+            var serverOwnEmails = new List<string>();
+            foreach (var email in emails)
+            {
+                if (IsStrictOwnAttendeeEmail(email)
+                    && !string.Equals(email, _outlookEmailAddress, StringComparison.OrdinalIgnoreCase))
+                {
+                    serverOwnEmails.Add(email);
+                }
+            }
+
+            foreach (var email in serverOwnEmails)
+            {
+                emails.Remove(email);
+                emails.Add(_outlookEmailAddress);
+            }
+        }
+
+        private bool IsStrictOwnAttendeeEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return false;
+
+            if (string.Equals(email, _outlookEmailAddress, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!string.IsNullOrEmpty(_serverEmailUri) && _serverEmailUri.Length > s_mailtoSchemaLength)
+            {
+                var serverEmail = _serverEmailUri.Substring(s_mailtoSchemaLength);
+                if (string.Equals(email, serverEmail, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void RemoveOrganizerDuplicatesFromAttendees(
+            IList<Attendee> attendees,
+            IEvent source,
+            IEntitySynchronizationLogger logger)
+        {
+            if (source.Organizer == null || source.Organizer.Value == null)
+                return;
+
+            for (int i = attendees.Count - 1; i >= 0; i--)
+            {
+                if (!EmailAddress.AreSame(attendees[i].Value, source.Organizer.Value))
+                    continue;
+
+                var email = TryGetAttendeeEmailWithoutMailto(attendees[i], logger);
+                attendees.RemoveAt(i);
+                s_logger.Debug($"MapAttendeesAndOrganizer2To1: prep removed organizer duplicate, email={email}");
+            }
+        }
+
+        private void ReplaceOwnAttendeeEmail(IList<Attendee> attendees, IEntitySynchronizationLogger logger)
+        {
+            var ownIndex = -1;
+            for (int i = 0; i < attendees.Count; i++)
+            {
+                var email = TryGetAttendeeEmailWithoutMailto(attendees[i], logger);
+                if (!IsStrictOwnAttendeeEmail(email))
+                {
+                    continue;
+                }
+
+                ownIndex = i;
+                break;
+            }
+
+            if (ownIndex < 0)
+            {
+                return;
+            }
+
+            var ownAttendee = attendees[ownIndex];
+            var outlookMailto = "mailto:" + _outlookEmailAddress;
+            var lastIndex = attendees.Count - 1;
+
+            if (ownIndex == lastIndex)
+            {
+                ownAttendee.Value = new Uri(outlookMailto);
+                ownAttendee.Parameters.Remove("EMAIL");
+                return;
+            }
+
+            var role = ownAttendee.Role;
+            var type = ownAttendee.Type;
+            var commonName = ownAttendee.CommonName;
+
+            attendees.RemoveAt(ownIndex);
+            attendees.Add(new Attendee
+            {
+                Role = role,
+                Value = new Uri(outlookMailto),
+                Type = type,
+                CommonName = commonName
+            });
+        }
+
+        private void DeduplicateAttendeesByEmail(IList<Attendee> attendees, IEntitySynchronizationLogger logger)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = attendees.Count - 1; i >= 0; i--)
+            {
+                var email = TryGetAttendeeEmailWithoutMailto(attendees[i], logger);
+                if (string.IsNullOrEmpty(email))
+                    continue;
+
+                if (seen.Add(email))
+                    continue;
+
+                s_logger.Debug($"MapAttendeesAndOrganizer2To1: prep dedupe removed duplicate, email={email}");
+                attendees.RemoveAt(i);
+            }
+        }
+
+        private string FormatAttendeeEmails(IList<Attendee> attendees, IEntitySynchronizationLogger logger)
+        {
+            var emails = new List<string>();
+            foreach (var attendee in attendees)
+            {
+                var email = TryGetAttendeeEmailWithoutMailto(attendee, logger);
+                emails.Add(string.IsNullOrEmpty(email) ? attendee.CommonName ?? "?" : email);
+            }
+
+            return string.Join(", ", emails);
+        }
+
+        private string TryGetAttendeeEmailWithoutMailto(Attendee attendee, IEntitySynchronizationLogger logger)
+        {
+            var attendeeEmail = TryGetAttendeeMailtoUri(attendee, logger);
+            if (string.IsNullOrEmpty(attendeeEmail))
+                return string.Empty;
+
+            return attendeeEmail.Substring(s_mailtoSchemaLength);
+        }
+
+        private bool TryMapServerAttendeeToOutlookRecipient(
+            Attendee attendee,
+            AppointmentItem target,
+            Dictionary<string, Recipient> indexByEmailAddresses,
+            HashSet<Recipient> targetRecipientsWhichShouldRemain,
+            HashSet<Recipient> recipientsToDispose,
+            IEntitySynchronizationLogger logger,
+            bool logActions,
+            string actionPrefix)
+        {
+            Recipient targetRecipient = null;
+            var attendeeEmail = TryGetAttendeeMailtoUri(attendee, logger);
+            string action;
+            string logEmail = attendeeEmail;
+
+            if (!string.IsNullOrEmpty(attendeeEmail))
+            {
+                var emailWithoutMailto = attendeeEmail.Substring(s_mailtoSchemaLength);
+                logEmail = emailWithoutMailto;
+                targetRecipient = TryFindRecipientByEmail(target, emailWithoutMailto, logger);
+                if (targetRecipient != null)
+                {
+                    action = "reused";
+                }
+                else if (indexByEmailAddresses.TryGetValue(attendeeEmail, out targetRecipient))
+                {
+                    action = "reused";
+                }
+                else
+                {
+                    var recipientName = CreateOutlookRecipientName(
+                        emailWithoutMailto, attendee.CommonName);
+
+                    targetRecipient = target.Recipients.Add(recipientName);
+                    action = "added";
+                }
+            }
+            else if (!string.IsNullOrEmpty(attendee.CommonName))
+            {
+                targetRecipient = target.Recipients.Add(attendee.CommonName);
+                action = "added";
+                logEmail = attendee.CommonName;
+            }
+            else
+            {
+                action = "skipped";
+            }
+
+            if (logActions)
+            {
+                s_logger.Info(
+                    $"MapAttendeesAndOrganizer2To1: attendee {actionPrefix}{action}, email={logEmail ?? string.Empty}");
+            }
+
+            if (targetRecipient == null)
+                return false;
+
+            recipientsToDispose.Add(targetRecipient);
+            targetRecipientsWhichShouldRemain.Add(targetRecipient);
+            targetRecipient.Type = (int)MapAttendeeType2To1(attendee.Role);
+            if (attendee.Type == "RESOURCE" || attendee.Type == "ROOM")
+                targetRecipient.Type = (int)OlMeetingRecipientType.olResource;
+            try
+            {
+                targetRecipient.Resolve();
+            }
+            catch (COMException ex)
+            {
+                s_logger.Warn("Can't resolve recipient in Server→Outlook mapping, skipping GAL lookup.", ex);
+                logger.LogWarning("Can't resolve recipient in Server→Outlook mapping", ex);
+            }
+
+            return true;
+        }
+
+        private string TryGetAttendeeMailtoUri(Attendee attendee, IEntitySynchronizationLogger logger)
+        {
+            var attendeeEmail = string.Empty;
+            if (attendee.Parameters.ContainsKey("EMAIL"))
+            {
+                attendeeEmail = attendee.Parameters.Get("EMAIL");
+                if (!attendeeEmail.StartsWith("mailto:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    attendeeEmail = "mailto:" + attendeeEmail;
+                }
+            }
+            else if (attendee.Value != null && StringComparer.InvariantCultureIgnoreCase.Compare(attendee.Value.Scheme, "mailto") == 0)
+            {
+                try
+                {
+                    attendeeEmail = attendee.Value.ToString();
+                }
+                catch (UriFormatException ex)
+                {
+                    s_logger.Warn("Ignoring invalid Uri in attendee email.", ex);
+                    logger.LogWarning("Ignoring invalid Uri in attendee email.", ex);
+                }
+            }
+
+            return attendeeEmail;
+        }
+
+        private void RemoveRecipientByEmail(
+                    AppointmentItem target,
+                    string email,
+                    HashSet<Recipient> recipientsToDispose,
+                    IEntitySynchronizationLogger logger)
+        {
+            for (int i = target.Recipients.Count; i >= 1; i--)
+            {
+                var recipient = target.Recipients[i];
+                recipientsToDispose.Add(recipient);
+
+                try
+                {
+                    if (recipient.Resolve())
+                    {
+                        using (var entryWrapper = GenericComObjectWrapper.Create(recipient.AddressEntry))
+                        {
+                            var recipientEmail = OutlookUtility.GetEmailAdressOrNull(entryWrapper.Inner, logger, s_logger);
+                            if (!string.IsNullOrEmpty(recipientEmail) && EmailAddress.AreSame(recipientEmail, email))
+                            {
+                                target.Recipients.Remove(i);
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch (COMException)
+                {
+                    //continue scanning
+                }
+
+                var emailFromAddress = TryExtractEmailFromRecipientName(recipient.Address);
+                if (!string.IsNullOrEmpty(emailFromAddress) && EmailAddress.AreSame(emailFromAddress, email))
+                {
+                    target.Recipients.Remove(i);
+                    return;
+                }
+
+                var emailFromName = TryExtractEmailFromRecipientName(recipient.Name);
+                if (!string.IsNullOrEmpty(emailFromName) && EmailAddress.AreSame(emailFromName, email))
+                {
+                    target.Recipients.Remove(i);
+                    return;
+                }
             }
         }
 
@@ -2366,11 +3047,61 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             return indexByEmailAddresses;
         }
 
+        private Recipient TryFindRecipientByEmail(AppointmentItem appointment, string email, IEntitySynchronizationLogger logger)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return null;
+            }
+
+            foreach (Recipient recipient in appointment.Recipients)
+            {
+                try
+                {
+                    if (recipient.Resolve())
+                    {
+                        using (var entryWrapper = GenericComObjectWrapper.Create(recipient.AddressEntry))
+                        {
+                            var recipientEmail = OutlookUtility.GetEmailAdressOrNull(entryWrapper.Inner, logger, s_logger);
+                            if (!string.IsNullOrEmpty(recipientEmail) && EmailAddress.AreSame(recipientEmail, email))
+                            {
+                                return recipient;
+                            }
+                        }
+                    }
+                }
+                catch (COMException)
+                {
+                    // continue scanning
+                }
+
+                var emailFromAddress = TryExtractEmailFromRecipientName(recipient.Address);
+                if (!string.IsNullOrEmpty(emailFromAddress) && EmailAddress.AreSame(emailFromAddress, email))
+                {
+                    return recipient;
+                }
+
+                var emailFromName = TryExtractEmailFromRecipientName(recipient.Name);
+                if (!string.IsNullOrEmpty(emailFromName) && EmailAddress.AreSame(emailFromName, email))
+                {
+                    return recipient;
+                }
+            }
+
+            return null;
+        }
+
         private string CreateOutlookRecipientName(string email, string commonName)
         {
             var fallbackName = !String.IsNullOrEmpty(commonName) ? $"{commonName} <{email}>" : email;
             try
             {
+                if (!String.IsNullOrEmpty(commonName)
+                    && String.Equals(commonName, email, StringComparison.OrdinalIgnoreCase))
+                {
+                    return email;
+                }
+
                 if (!String.IsNullOrEmpty(commonName) 
                     && !String.Equals(commonName, EmailAddress.Parse(email).NameId, StringComparison.OrdinalIgnoreCase))
                     return fallbackName;
@@ -2411,6 +3142,402 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             {
                 return wrapper.Inner.GetProperty(propertyName);
             }
+        }
+
+        private string ResolveOwnParticipationStatus(AppointmentItem source, Recipient recipient)
+        {
+            if (source.MeetingStatus == OlMeetingStatus.olMeetingReceivedAndCanceled)
+            {
+                return "DECLINED";
+            }
+
+            if (!IsAmbiguousNotRespondedStatus(source.ResponseStatus))
+            {
+                return MapParticipation1To2(source.ResponseStatus);
+            }
+
+            if (!IsAmbiguousNotRespondedStatus(recipient.MeetingResponseStatus))
+            {
+                s_logger.Debug($"Using recipient meeting response for own attendee because source response is ambiguous: {source.ResponseStatus} -> {recipient.MeetingResponseStatus}");
+                return MapParticipation1To2(recipient.MeetingResponseStatus);
+            }
+
+            if (source.MeetingStatus == OlMeetingStatus.olMeetingReceived)
+            {
+                s_logger.Debug($"Own attendee response is ambiguous ({source.ResponseStatus}); mapper does not force participation status");
+            }
+
+            return MapParticipation1To2(source.ResponseStatus);
+        }
+
+        private static bool IsAmbiguousNotRespondedStatus(OlResponseStatus status)
+        {
+            return status == OlResponseStatus.olResponseNone || status == OlResponseStatus.olResponseNotResponded;
+        }
+
+        //XXX Читаем служебный marker, который говорит: "этот item еще нужно дофинализировать через Respond()".
+        //XXX Если marker битый или просроченный, сразу чистим его, чтобы не гонять бесконечные принудительные обновления.
+        private bool IsDeferredRespondPending(AppointmentItem appointment, out DateTime deferredRespondAtUtc)
+        {
+            deferredRespondAtUtc = default(DateTime);
+            try
+            {
+                if (appointment == null)
+                {
+                    return false;
+                }
+
+                string value;
+                using (var pa = GenericComObjectWrapper.Create(appointment.PropertyAccessor))
+                {
+                    try
+                    {
+                        var rawValue = pa.Inner.GetProperty(DeferredRespondMarkerPropertyAccessor);
+                        value = rawValue?.ToString();
+                    }
+                    catch (COMException)
+                    {
+                        return false;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return false;
+                }
+
+                if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out deferredRespondAtUtc))
+                {
+                    ClearDeferredRespondMarker(appointment);
+                    return false;
+                }
+
+                if (DateTime.UtcNow - deferredRespondAtUtc > DeferredRespondMarkerTtl)
+                {
+                    s_logger.Debug($"Deferred meeting response marker expired for '{appointment.EntryID}'.");
+                    ClearDeferredRespondMarker(appointment);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Warn("Failed to read deferred meeting response marker.", ex);
+                return false;
+            }
+        }
+
+        //XXX Ставим marker через PropertyAccessor, чтобы пережить Outlook recreate и не зависеть от UserProperties.
+        //XXX Возвращаем bool: defer включаем только если marker реально записался.
+        private bool MarkDeferredRespondPending(AppointmentItem appointment)
+        {
+            try
+            {
+                if (appointment == null)
+                {
+                    return false;
+                }
+
+                using (var pa = GenericComObjectWrapper.Create(appointment.PropertyAccessor))
+                {
+                    pa.Inner.SetProperty(DeferredRespondMarkerPropertyAccessor, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+                    return true;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Warn("Failed to set deferred meeting response marker.", ex);
+            }
+
+            return false;
+        }
+
+        //XXX Marker одноразовый: после успешного (или уже не нужного) Respond() обязательно убираем.
+        private void ClearDeferredRespondMarker(AppointmentItem appointment)
+        {
+            try
+            {
+                if (appointment == null)
+                {
+                    return;
+                }
+
+                using (var pa = GenericComObjectWrapper.Create(appointment.PropertyAccessor))
+                {
+                    try
+                    {
+                        pa.Inner.DeleteProperty(DeferredRespondMarkerPropertyAccessor);
+                    }
+                    catch (COMException)
+                    {
+                        //Marker is optional and may not exist yet
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Warn("Failed to clear deferred meeting response marker.", ex);
+            }
+        }
+
+        private void ClearDeferredRespondPending(AppointmentItem appointment, string uid)
+        {
+            ClearDeferredRespondMarker(appointment);
+            if (_deferredRespondStorage != null && !string.IsNullOrEmpty(uid))
+                _deferredRespondStorage.ClearPending(uid);
+        }
+
+        private static void LogOutgoingAttendeeDiagnostics(string scope, AppointmentItem source, IEvent serverEventOrNull, IEvent uidHintEventOrNull)
+        {
+            int outCnt = -1;
+            try
+            {
+                outCnt = source.Recipients.Count;
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Debug("OutgoingAttendeeDiagnostics: Recipients.Count failed", ex);
+            }
+
+            int srvCnt = 0;
+            if (serverEventOrNull != null && serverEventOrNull.Attendees != null)
+            {
+                srvCnt = serverEventOrNull.Attendees.Count;
+            }
+
+            if (outCnt >= 0 && srvCnt == outCnt)
+            {
+                return;
+            }
+
+            bool recurring = false;
+            try
+            {
+                recurring = source.IsRecurring;
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Debug("OutgoingAttendeeDiagnostics: IsRecurring failed", ex);
+            }
+
+            int meeting = -1;
+            try
+            {
+                meeting = (int)source.MeetingStatus;
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Debug("OutgoingAttendeeDiagnostics: MeetingStatus failed", ex);
+            }
+
+            string uid = "-";
+            if (uidHintEventOrNull != null && !string.IsNullOrEmpty(uidHintEventOrNull.UID))
+            {
+                var u = uidHintEventOrNull.UID;
+                uid = u.Length > 24 ? u.Substring(0, 24) + "..." : u;
+            }
+
+            string outStr = outCnt >= 0 ? outCnt.ToString(CultureInfo.InvariantCulture) : "?";
+            string dStr = outCnt >= 0 ? (srvCnt - outCnt).ToString(CultureInfo.InvariantCulture) : "?";
+
+            var msg = string.Format(
+                CultureInfo.InvariantCulture,
+                "OutgoingAttendeeDiagnostics: scope={0} out={1} server={2} delta_srv_minus_out={3} recurring={4} meetingStatus={5} uid={6}",
+                scope, outStr, srvCnt, dStr, recurring, meeting, uid);
+
+            s_logger.Debug(msg);
+
+            if (outCnt >= 0 && srvCnt > outCnt)
+            {
+                s_logger.Warn(msg);
+                try
+                {
+                    Telemetry.Signal(
+                        Telemetry.SyncDiagnostics,
+                        "outgoing_attendee_server_richer",
+                        new
+                        {
+                            scope = scope,
+                            out_cnt = outCnt,
+                            srv_cnt = srvCnt,
+                            d_srv_minus_out = srvCnt - outCnt,
+                            rec = recurring ? 1 : 0
+                        });
+                }
+                catch (System.Exception ex)
+                {
+                    s_logger.Debug("OutgoingAttendeeDiagnostics: telemetry failed", ex);
+                }
+            }
+        }
+
+        private static void LogSequenceDiagnostics(IICalendar newCal, IICalendar existingCal)
+        {
+            try
+            {
+                var existingSeq = existingCal.Events.Count > 0 ? existingCal.Events.Max(e => e.Sequence) : -1;
+                var newSeq = existingSeq + 1;
+
+                foreach (var newEv in newCal.Events)
+                {
+                    var isException = newEv.RecurrenceID != null;
+                    var scope = isException ? $"exception(RID={newEv.RecurrenceID})" : "master";
+
+                    var serverEv = isException
+                        ? existingCal.Events.FirstOrDefault(e => e.RecurrenceID != null &&
+                            e.RecurrenceID.Value.Date == newEv.RecurrenceID.Value.Date)
+                        : existingCal.Events.FirstOrDefault(e => e.RecurrenceID == null);
+
+                    if (serverEv == null)
+                    {
+                        s_logger.Debug($"SEQUENCE [{scope}]: new event, assigning seq={newSeq}");
+                        continue;
+                    }
+
+                    var changes = new System.Text.StringBuilder();
+                    if (newEv.Start?.Value != serverEv.Start?.Value)
+                    {
+                        changes.Append("DTSTART ");
+                    }
+
+                    if (newEv.DTEnd?.Value != serverEv.DTEnd?.Value)
+                    {
+                        changes.Append("DTEND ");
+                    }
+
+                    if (newEv.Summary != serverEv.Summary)
+                    {
+                        changes.Append("SUMMARY ");
+                    }
+
+                    if (newEv.Location != serverEv.Location)
+                    {
+                        changes.Append("LOCATION ");
+                    }
+
+                    if (newEv.Description != serverEv.Description)
+                    {
+                        changes.Append("DESCRIPTION ");
+                    }
+
+                    var newRrule = newEv.RecurrenceRules.Count > 0 ? newEv.RecurrenceRules[0].ToString() : "";
+                    var srvRrule = serverEv.RecurrenceRules.Count > 0 ? serverEv.RecurrenceRules[0].ToString() : "";
+                    if (newRrule != srvRrule)
+                    {
+                        changes.Append("RRULE ");
+                    }
+
+                    var newAttendees = string.Join(",", newEv.Attendees.Select(a => a.Value?.ToString() ?? "").OrderBy(x => x));
+                    var srvAttendees = string.Join(",", serverEv.Attendees.Select(a => a.Value?.ToString() ?? "").OrderBy(x => x));
+                    if (newAttendees != srvAttendees)
+                    {
+                        changes.Append("ATTENDEES ");
+                    }
+                    var changedFields = changes.ToString().Trim();
+                    var decision = string.IsNullOrEmpty(changedFields) ? "increment(no_content_change)" : $"increment({changedFields})";
+
+                    s_logger.Debug($"SEQUENCE [{scope}]: server_seq={serverEv.Sequence} → new_seq={newSeq}, decision={decision}");
+                    if (!string.IsNullOrEmpty(changedFields))
+                    {
+                        s_logger.Debug($"SEQUENCE [{scope}] changed fields detail: {changedFields}");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Debug("LogSequenceDiagnostics failed", ex);
+            }
+        }
+
+        private static IEvent TryFindServerExceptionForOutlook(
+            IICalendar serverCalOrNull,
+            AppointmentItem masterSource,
+            Exception outlookEx,
+            DateTimeZone sourceZone,
+            ITimeZone startIcalTimeZone,
+            EventMappingConfiguration configuration)
+        {
+            if (serverCalOrNull == null)
+            {
+                return null;
+            }
+
+            iCalDateTime expectedRid;
+            if (masterSource.AllDayEvent)
+            {
+                expectedRid = new iCalDateTime(outlookEx.OriginalDate);
+                expectedRid.HasTime = false;
+            }
+            else
+            {
+                var localEx = LocalDateTime.FromDateTime(outlookEx.OriginalDate);
+                var zonedEx = sourceZone.AtLeniently(localEx);
+                if (configuration.CreateEventsInUTC || startIcalTimeZone == null)
+                {
+                    var utc = zonedEx.ToDateTimeUtc();
+                    expectedRid = new iCalDateTime(utc) { IsUniversalTime = true };
+                }
+                else
+                {
+                    var tz = configuration.UseIanaTz
+                        ? DateTimeZoneProviders.Tzdb[startIcalTimeZone.TZID]
+                        : DateTimeZoneProviders.Bcl[startIcalTimeZone.TZID];
+                    var local = zonedEx.WithZone(tz).LocalDateTime.ToDateTimeUnspecified();
+                    expectedRid = new iCalDateTime(local);
+                    expectedRid.SetTimeZone(startIcalTimeZone);
+                }
+            }
+
+            foreach (var ev in serverCalOrNull.Events)
+            {
+                var rid = ev.RecurrenceID;
+                if (rid == null)
+                {
+                    continue;
+                }
+
+                bool match = false;
+                try
+                {
+                    match = !rid.HasTime && !expectedRid.HasTime ? rid.Date.Date == expectedRid.Date.Date : rid.AsUtc() == expectedRid.AsUtc();
+                }
+                catch
+                {
+                    match = false;
+                }
+                if (match)
+                {
+                    return ev;
+                }
+            }
+            return null;
+        }
+
+        private static string TryExtractEmailFromRecipientName(string recipientName)
+        {
+            if (string.IsNullOrEmpty(recipientName))
+            {
+                return null;
+            }
+
+            var angleBracketStart = recipientName.LastIndexOf('<');
+            var angleBracketEnd = recipientName.LastIndexOf('>');
+            if (angleBracketStart >= 0 && angleBracketEnd > angleBracketStart)
+            {
+                var extracted = recipientName.Substring(angleBracketStart + 1, angleBracketEnd - angleBracketStart - 1);
+                if (extracted.Contains("@"))
+                {
+                    return extracted;
+                }
+            }
+
+            if (recipientName.Contains("@") && !recipientName.Contains(" "))
+            {
+                return recipientName;
+            }
+
+            return null;
         }
     }
 }

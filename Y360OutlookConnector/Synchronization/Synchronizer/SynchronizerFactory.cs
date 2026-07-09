@@ -55,6 +55,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         private readonly IExceptionHandlingStrategy _exceptionHandlingStrategy = new ExceptionHandlingStrategy();
         private readonly InvitesInfoStorage _invitesInfoStorage;
         private readonly IDateTimeRangeProvider _dateTimeRangeProvider;
+        private readonly DeferredRespondStorage _deferredRespondStorage = new DeferredRespondStorage(TimeSpan.FromMinutes(15));
 
         private readonly IEqualityComparer<DateTime> _aTypeVersionComparer = Factories.CreateDateTimeEqualityComparer();
 
@@ -138,7 +139,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 outlookFolderStoreId, outlookEmailAddress, serverEmailAddress, serverUserCommonName,
                 isReadonly, storageDataDirectory, mappingConfiguration, cancelTokenSource,
                 (emailAddress, serverEmail, serverUserCommon, localTimeZoneId, outlookAppVersion, timeZoneCache, config, configuredEventTimeZone, outlookTimeZones, calendarResourceResolver) =>
-                    EntityMappers.EventEntityMapper.Create(emailAddress, serverEmail, serverUserCommon, localTimeZoneId, outlookAppVersion, timeZoneCache, config, configuredEventTimeZone, outlookTimeZones, calendarResourceResolver, failedEntityTracker),
+                    EntityMappers.EventEntityMapper.Create(emailAddress, serverEmail, serverUserCommon, localTimeZoneId, outlookAppVersion, timeZoneCache, config, configuredEventTimeZone, outlookTimeZones, calendarResourceResolver, failedEntityTracker, _deferredRespondStorage),
                 failedEntityTracker);
 
             return new CancellableSynchronizer(synchronizer, cancelTokenSource);
@@ -368,7 +369,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             var aTypeWriteRepository = BatchEntityRepositoryAdapter.Create(aTypeRepository, _exceptionHandlingStrategy);
             var bTypeWriteRepository = BatchEntityRepositoryAdapter.Create(bTypeRepository, _exceptionHandlingStrategy);
 
-            var eventSyncStateCreationStrategy = CreateEventInitialSyncStateStrategy(isReadonly, syncStateFactory, aTypeRepository, outlookEmailAddress);
+            var eventSyncStateCreationStrategy = CreateEventInitialSyncStateStrategy(isReadonly, syncStateFactory, aTypeRepository, outlookEmailAddress, bTypeRepository);
 
             var synchronizer =
                 new Synchronizer<AppointmentId, DateTime, IAppointmentItemWrapper, WebResourceName, string, IICalendar,
@@ -402,7 +403,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                         IEventSynchronizationContext, string>(bTypeRepository, bTypeIdEqualityComparer,
                         bTypeVersionComparer),
                     NullStateTokensDataAccess<int, string>.Instance,
-                    new EventSyncInterceptorFactory(_invitesInfoStorage));
+                    new EventSyncInterceptorFactory(_invitesInfoStorage, _outlookSession, _deferredRespondStorage));
 
             return new OutlookEventSynchronizer<WebResourceName, string>(
                 new ContextCreatingSynchronizerDecorator<AppointmentId, DateTime, IAppointmentItemWrapper,
@@ -530,13 +531,13 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
         private IInitialSyncStateCreationStrategy<AppointmentId, DateTime, IAppointmentItemWrapper,
                 WebResourceName, string, IICalendar, IEventSynchronizationContext>
             CreateEventInitialSyncStateStrategy(bool isReadonly,
-                IEntitySyncStateFactory<AppointmentId, DateTime, IAppointmentItemWrapper,
+                EntitySyncStateFactory<AppointmentId, DateTime, IAppointmentItemWrapper,
                     WebResourceName, string, IICalendar, IEventSynchronizationContext> syncStateFactory,
-                OutlookEventRepositoryWrapper outlookRepository, string outlookEmailAddress)
+                OutlookEventRepositoryWrapper outlookRepository, string outlookEmailAddress, CalDavRepository<IEventSynchronizationContext> calDavRepository)
         {
             if (isReadonly)
                 return new EventSyncStrategyServerToOutlook(syncStateFactory);
-            return new EventSyncStrategyBothWays(syncStateFactory, _invitesInfoStorage, _outlookSession, outlookRepository, outlookEmailAddress);
+            return new EventSyncStrategyBothWays(syncStateFactory, syncStateFactory.Environment, _invitesInfoStorage, _outlookSession, outlookRepository, outlookEmailAddress, _deferredRespondStorage, calDavRepository);
         }
 
         class EntityLogMessageFactory :

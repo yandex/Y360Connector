@@ -40,9 +40,6 @@ namespace Y360OutlookConnector.Ui.Login
 
     public class LogonSession
     {
-        public const string ClientId = "4e20b574e4974457904d9daef7bc41b6";
-        public const string OriginAppId = "outlook_y360_sync";
-
         private readonly HttpClient _httpClient;
         private readonly string  _codeVerifier;
         private readonly string  _tld;
@@ -82,8 +79,8 @@ namespace Y360OutlookConnector.Ui.Login
             var extraParameters = new Dictionary<string, string>
             {
                 ["response_type"] = "code",
-                ["origin"] = $"{OriginAppId}",
-                ["client_id"] = $"{ClientId}",
+                ["origin"] = EndpointConfig.OAuthOriginAppId,
+                ["client_id"] = EndpointConfig.OAuthClientId,
                 ["code_challenge"] = $"{codeChallenge}",
                 ["code_challenge_method"] = "S256"
             };
@@ -93,7 +90,7 @@ namespace Y360OutlookConnector.Ui.Login
                 extraParameters["use_strong_code"] = "1";
             }
 
-            return CreateUri($"https://oauth.yandex.{_tld}/authorize", extraParameters);
+            return CreateUri(EndpointConfig.GetOAuthAuthorizeUrl(_tld), extraParameters);
         }
 
         public Uri GetPassportUrl()
@@ -103,11 +100,11 @@ namespace Y360OutlookConnector.Ui.Login
 
             var extraParameters = new Dictionary<string, string>
             {
-                ["origin"] = $"{OriginAppId}",
+                ["origin"] = EndpointConfig.OAuthOriginAppId,
                 ["retpath"] = $"{oauthUrl}"
             };
 
-            var passportUrl = CreateUri($"https://passport.yandex.{_tld}/auth", extraParameters);
+            var passportUrl = CreateUri(EndpointConfig.GetPassportAuthUrl(_tld), extraParameters);
             s_logger.Debug($"Passport URL generated");
             return passportUrl;
         }
@@ -115,14 +112,14 @@ namespace Y360OutlookConnector.Ui.Login
         public async Task<string> RequestTokenAsync(string code)
         {
             var tld = GetTopLevelDomain(Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName);
-            var url = $"https://oauth.yandex.{tld}/token";
+            var url = EndpointConfig.GetOAuthTokenUrl(tld);
 
             var content = new Dictionary<string, string>()
             {
                 { "grant_type", "authorization_code" },
                 { "code", code },
-                { "origin", OriginAppId },
-                { "client_id", ClientId },
+                { "origin", EndpointConfig.OAuthOriginAppId },
+                { "client_id", EndpointConfig.OAuthClientId },
                 { "code_verifier", _codeVerifier },
                 { "device_name", Environment.MachineName }
             };
@@ -149,8 +146,7 @@ namespace Y360OutlookConnector.Ui.Login
 
         public async Task<LoginInfo> QueryLoginInfoAsync(string accessToken)
         {
-            const string url = "https://login.yandex.ru/info?format=json";
-            using (var httpRequest = new HttpRequestMessage(HttpMethod.Get, url))
+            using (var httpRequest = new HttpRequestMessage(HttpMethod.Get, EndpointConfig.LoginInfoUrl))
             {
                 httpRequest.Headers.Authorization = new AuthenticationHeaderValue("OAuth", accessToken);
 

@@ -29,12 +29,30 @@ namespace Y360OutlookConnector.Synchronization
             var item = _outlookApp.Session?.GetItemFromID(entryId);
             if (item is Outlook.MeetingItem meetingItem)
             {
+                if (!IsMeetingRequest(meetingItem))
+                {
+                    return;
+                }
+
                 var appointmentItem = meetingItem.GetAssociatedAppointment(false);
                 if (appointmentItem?.GlobalAppointmentID != null)
                 {
                     _invitesInfo.AddIncomingInvite(appointmentItem.GlobalAppointmentID, 
                         appointmentItem.LastModificationTime.ToUniversalTime());
                 }
+            }
+        }
+
+        private static bool IsMeetingRequest(Outlook.MeetingItem meetingItem)
+        {
+            try
+            {
+                return meetingItem.MessageClass != null && meetingItem.MessageClass.StartsWith("IPM.Schedule.Meeting.Request", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // In some cases (e.g. when the item is already deleted) accessing MessageClass may throw an exception, treat such items as non-meeting requests
+                return false;
             }
         }
 

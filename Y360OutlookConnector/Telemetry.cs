@@ -23,6 +23,8 @@ namespace Y360OutlookConnector
         public const string TelemostSettingsWindowEvents = "telemost_settings_window";
         public const string ConfirmedBugEvent = "confirmed_bug_event";
         public const string CalendarEvents = "calendar_events";
+        public const string YandexCalendarEvents = "yandex_calendar";
+        public const string SyncDiagnostics = "sync_diagnostics";
 
         public static void Initialize(string dataFolder)
         {

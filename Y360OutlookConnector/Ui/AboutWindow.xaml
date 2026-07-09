@@ -20,9 +20,9 @@
                        HorizontalAlignment="Center"
                        FontWeight="Bold" FontSize="17px"
                        Text="{x:Static l10n:Strings.AboutWindow_VersionString}" />
-            <TextBlock TextAlignment="Center"
-                       FontSize="14px" TextWrapping="Wrap"
-                       Text="{x:Static l10n:Strings.AboutWindow_CopyrightText}" />
+            <TextBlock x:Name="CopyrightLabel"
+                       TextAlignment="Center"
+                       FontSize="14px" TextWrapping="Wrap"/>
             <TextBlock Margin="16" HorizontalAlignment="Center" 
                        FontSize="14px">
                 <Hyperlink x:Name="LicenseHyperlink" RequestNavigate="Hyperlink_RequestNavigate">

@@ -66,8 +66,6 @@ namespace Y360OutlookConnector
             }
         }
 
-        private const string LastVersionInfoUrl = "https://cloud-api.yandex.net/v1/calendar/outlook-extensions/win86/installer";
-
         private readonly ProxyOptionsProvider _proxyProvider;
         private readonly Timer _timer;
         private readonly CancellationTokenSource _cancelTokenSource;
@@ -300,7 +298,7 @@ namespace Y360OutlookConnector
 
         private static Uri GetUriForUpdateChannel(UpdateChannel updateChannel)
         {
-            var uriBuilder = new UriBuilder(LastVersionInfoUrl);
+            var uriBuilder = new UriBuilder(EndpointConfig.GetAutoUpdateInstallerUrl());
             var query = HttpUtility.ParseQueryString(uriBuilder.Query);
             query["build"] = updateChannel.ToString().ToLower();
             uriBuilder.Query = query.ToString();

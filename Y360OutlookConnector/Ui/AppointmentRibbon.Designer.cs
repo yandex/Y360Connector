@@ -45,11 +45,13 @@ namespace Y360OutlookConnector.Ui
             this.btnTelemostSettings = this.Factory.CreateRibbonButton();
             this.group2 = this.Factory.CreateRibbonGroup();
             this.YandexCalendarRibbonMenu = this.Factory.CreateRibbonMenu();
+            this.btnCreateEventInYandexInAppointment = this.Factory.CreateRibbonButton();
             this.btnEditEventInAppointment = this.Factory.CreateRibbonButton();
             this.btnNavigateToYandexCalendarInAppointment = this.Factory.CreateRibbonButton();
             this.tab2 = this.Factory.CreateRibbonTab();
             this.group3 = this.Factory.CreateRibbonGroup();
             this.SchedulingAssistantTabYandexCalendarMenu = this.Factory.CreateRibbonMenu();
+            this.btnCreateEventInYandexInSchedulingAssistant = this.Factory.CreateRibbonButton();
             this.btnEditEventInSchedulingAssistant = this.Factory.CreateRibbonButton();
             this.btnNavigateToYandexCalendarInSchedulingAssistant = this.Factory.CreateRibbonButton();
             this.menu1 = this.Factory.CreateRibbonMenu();
@@ -122,11 +124,20 @@ namespace Y360OutlookConnector.Ui
             // 
             this.YandexCalendarRibbonMenu.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
             this.YandexCalendarRibbonMenu.Image = global::Y360OutlookConnector.Properties.Resources.YandexCalendar;
+            this.YandexCalendarRibbonMenu.Items.Add(this.btnCreateEventInYandexInAppointment);
             this.YandexCalendarRibbonMenu.Items.Add(this.btnEditEventInAppointment);
             this.YandexCalendarRibbonMenu.Items.Add(this.btnNavigateToYandexCalendarInAppointment);
             this.YandexCalendarRibbonMenu.Label = "Яндекс Календарь";
             this.YandexCalendarRibbonMenu.Name = "YandexCalendarRibbonMenu";
             this.YandexCalendarRibbonMenu.ShowImage = true;
+            // 
+            // btnCreateEventInYandexInAppointment
+            // 
+            this.btnCreateEventInYandexInAppointment.Image = global::Y360OutlookConnector.Properties.Resources.YandexCalendar;
+            this.btnCreateEventInYandexInAppointment.Label = "Встреча в Яндекс Календаре";
+            this.btnCreateEventInYandexInAppointment.Name = "btnCreateEventInYandexInAppointment";
+            this.btnCreateEventInYandexInAppointment.ShowImage = true;
+            this.btnCreateEventInYandexInAppointment.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.CreateEventInYandexCalendar_Click);
             // 
             // btnEditEventInAppointment
             // 
@@ -161,11 +172,20 @@ namespace Y360OutlookConnector.Ui
             // 
             this.SchedulingAssistantTabYandexCalendarMenu.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
             this.SchedulingAssistantTabYandexCalendarMenu.Image = global::Y360OutlookConnector.Properties.Resources.YandexCalendar;
+            this.SchedulingAssistantTabYandexCalendarMenu.Items.Add(this.btnCreateEventInYandexInSchedulingAssistant);
             this.SchedulingAssistantTabYandexCalendarMenu.Items.Add(this.btnEditEventInSchedulingAssistant);
             this.SchedulingAssistantTabYandexCalendarMenu.Items.Add(this.btnNavigateToYandexCalendarInSchedulingAssistant);
             this.SchedulingAssistantTabYandexCalendarMenu.Label = "Яндекс Календарь";
             this.SchedulingAssistantTabYandexCalendarMenu.Name = "SchedulingAssistantTabYandexCalendarMenu";
             this.SchedulingAssistantTabYandexCalendarMenu.ShowImage = true;
+            // 
+            // btnCreateEventInYandexInSchedulingAssistant
+            // 
+            this.btnCreateEventInYandexInSchedulingAssistant.Image = global::Y360OutlookConnector.Properties.Resources.YandexCalendar;
+            this.btnCreateEventInYandexInSchedulingAssistant.Label = "Встреча в Яндекс Календаре";
+            this.btnCreateEventInYandexInSchedulingAssistant.Name = "btnCreateEventInYandexInSchedulingAssistant";
+            this.btnCreateEventInYandexInSchedulingAssistant.ShowImage = true;
+            this.btnCreateEventInYandexInSchedulingAssistant.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.CreateEventInYandexCalendar_Click);
             // 
             // btnEditEventInSchedulingAssistant
             // 
@@ -258,11 +278,13 @@ namespace Y360OutlookConnector.Ui
         internal Microsoft.Office.Tools.Ribbon.RibbonButton button5;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
         internal Microsoft.Office.Tools.Ribbon.RibbonMenu YandexCalendarRibbonMenu;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnCreateEventInYandexInAppointment;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnEditEventInAppointment;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnNavigateToYandexCalendarInAppointment;
         private Microsoft.Office.Tools.Ribbon.RibbonTab tab2;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
         internal Microsoft.Office.Tools.Ribbon.RibbonMenu SchedulingAssistantTabYandexCalendarMenu;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnCreateEventInYandexInSchedulingAssistant;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnEditEventInSchedulingAssistant;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnNavigateToYandexCalendarInSchedulingAssistant;
     }

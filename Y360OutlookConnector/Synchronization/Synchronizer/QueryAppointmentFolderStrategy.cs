@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Reflection;
 using CalDavSynchronizer;
 using CalDavSynchronizer.Implementation.Common;
 using CalDavSynchronizer.Implementation.ComWrappers;
@@ -141,14 +142,23 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 var subject = (string) row[SubjectColumnId];
                 var appointmentId = new AppointmentId(entryId, globalAppointmentId);
 
-                if (!GetDateTime(row, LastModificationTimeColumnId, true, out DateTime lastModificationTime))
+                if (!GetDateTime(row, LastModificationTimeColumnId, true, out DateTime lastModificationTime, out bool lastModificationTimeMissing))
                 {
-                    s_logger.Warn($"Column '{nameof(LastModificationTimeColumnId)}' of event '{entryId}' is NULL.");
-                    logger.LogWarning(entryId, $"Column '{nameof(LastModificationTimeColumnId)}' is NULL.");
+                    if (lastModificationTimeMissing)
+                    {
+                        s_logger.Warn($"Column '{nameof(LastModificationTimeColumnId)}' of event '{entryId}' is NULL.");
+                        logger.LogWarning(entryId, $"Column '{nameof(LastModificationTimeColumnId)}' is NULL.");
+                    }
+                    else
+                    {
+                        s_logger.Warn($"Column '{nameof(LastModificationTimeColumnId)}' of event '{entryId}' could not be read as DateTime.");
+                        logger.LogWarning(entryId, $"Column '{nameof(LastModificationTimeColumnId)}' could not be read as DateTime.");
+                    }
+
                     lastModificationTime = OutlookUtility.OUTLOOK_DATE_NONE;
                 }
 
-                if (GetDateTime(row, LID_OWNER_CRITICAL_CHANGE, false, out DateTime ownerCriticalChange) && ownerCriticalChange != OutlookUtility.OUTLOOK_DATE_NONE)
+                if (GetDateTime(row, LID_OWNER_CRITICAL_CHANGE, false, out DateTime ownerCriticalChange, out _) && ownerCriticalChange != OutlookUtility.OUTLOOK_DATE_NONE)
                 {
                     if(lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || ownerCriticalChange > lastModificationTime)
                     {
@@ -156,7 +166,7 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                     }                    
                 }
 
-                if (GetDateTime(row, PidLidAppointmentReplyTime, false, out DateTime appointmentReplyTime) && appointmentReplyTime != OutlookUtility.OUTLOOK_DATE_NONE)
+                if (GetDateTime(row, PidLidAppointmentReplyTime, false, out DateTime appointmentReplyTime, out _) && appointmentReplyTime != OutlookUtility.OUTLOOK_DATE_NONE)
                 {
                     if (lastModificationTime == OutlookUtility.OUTLOOK_DATE_NONE || appointmentReplyTime > lastModificationTime)
                     {
@@ -166,28 +176,56 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
 
                 var startObject = row[StartColumnId];
                 DateTime? start;
-                if (startObject != null)
-                {
-                    start = (DateTime)startObject;
-                }
-                else
+                if (startObject == null)
                 {
                     s_logger.Warn($"Column '{nameof(StartColumnId)}' of event '{entryId}' is NULL.");
                     logger.LogWarning(entryId, $"Column '{nameof(StartColumnId)}' is NULL.");
                     start = null;
                 }
+                else
+                {
+                    DateTime startDt;
+                    if (TryCoerceOutlookTableDate(startObject, false, out startDt))
+                    {
+                        if (startObject is string)
+                        {
+                            s_logger.Warn($"Column '{nameof(StartColumnId)}' of event '{entryId}' was received as string, coersion applied.");
+                        }
+                        start = startDt;
+                    }
+                    else
+                    {
+                        s_logger.Warn($"Column '{nameof(StartColumnId)}' of event '{entryId}' could not be read as DateTime.");
+                        logger.LogWarning(entryId, $"Column '{nameof(StartColumnId)}' could not be read as DateTime.");
+                        start = null;
+                    }
+                }
 
                 var endObject = row[EndColumnId];
                 DateTime? end;
-                if (endObject != null)
-                {
-                    end = (DateTime)endObject;
-                }
-                else
+                if (endObject == null)
                 {
                     s_logger.Warn($"Column '{nameof(EndColumnId)}' of event '{entryId}' is NULL.");
                     logger.LogWarning(entryId, $"Column '{nameof(EndColumnId)}' is NULL.");
                     end = null;
+                }
+                else
+                {
+                    DateTime endDt;
+                    if (TryCoerceOutlookTableDate(endObject, false, out endDt))
+                    {
+                        if (endObject is string)
+                        {
+                            s_logger.Warn($"Column '{nameof(EndColumnId)}' of event '{entryId}' was received as string, coersion applied.");
+                        }
+                        end = endDt;
+                    }
+                    else
+                    {
+                        s_logger.Warn($"Column '{nameof(EndColumnId)}' of event '{entryId}' could not be read as DateTime.");
+                        logger.LogWarning(entryId, $"Column '{nameof(EndColumnId)}' could not be read as DateTime.");
+                        end = null;
+                    }
                 }
 
                 var entityVersion = EntityVersion.Create(appointmentId, lastModificationTime);
@@ -200,27 +238,34 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             }
         }
 
-        private static bool GetDateTime(Row row, string propertyName, bool isLocalTime, out DateTime dateTime)
+        private static bool GetDateTime(Row row, string propertyName, bool isLocalTime, out DateTime dateTime, out bool isValueMissing)
         {
             dateTime = OutlookUtility.OUTLOOK_DATE_NONE;
-            bool result = false;
+            isValueMissing = false;
             try
             {
                 var obj = row[propertyName];
-                if (obj != null)
+                if (obj == null)
                 {
-                    dateTime = (DateTime)obj;
-                    if (isLocalTime)
-                        dateTime = dateTime.ToUniversalTime();
-                    result = true;
+                    isValueMissing = true;
+                    return false;
                 }
+
+                if (!TryCoerceOutlookTableDate(obj, isLocalTime, out dateTime))
+                {
+                    s_logger.Debug($"Failed to coerce datetime from {propertyName}, type: {obj.GetType().Name}");
+                    dateTime = OutlookUtility.OUTLOOK_DATE_NONE;
+                    return false;
+                }
+
+                return true;
             }
             catch (System.Exception ex)
             {
-                result = false;
+                dateTime = OutlookUtility.OUTLOOK_DATE_NONE;
                 s_logger.Debug($"Failed to retrieve datetime from {propertyName}", ex);
+                return false;
             }
-            return result;
         }
 
         private static AppointmentSlim CreateAppointmentSlim(string entryId, string storeId, IOutlookSession session)
@@ -247,6 +292,47 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
             {
                 s_logger.Error($"Could not fetch AppointmentItem '{entryId}', skipping.", ex);
                 return null;
+            }
+        }
+
+        private static bool TryCoerceOutlookTableDate(object value, bool convertLocalToUtc, out DateTime dateTime)
+        {
+            dateTime = default(DateTime);
+            if (value == null)
+            {
+                return false;
+            }
+
+            if (value is DateTime dtDirect)
+            {
+                dateTime = convertLocalToUtc ? dtDirect.ToUniversalTime() : dtDirect;
+                return true;
+            }
+
+            var dateTimeText = value as string;
+            if (dateTimeText != null)
+            {
+                DateTime dtParsed;
+                if (DateTime.TryParse(dateTimeText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dtParsed)
+                    || DateTime.TryParse(dateTimeText, CultureInfo.CurrentCulture, DateTimeStyles.RoundtripKind, out dtParsed))
+                {
+                    dateTime = convertLocalToUtc ? dtParsed.ToUniversalTime() : dtParsed;
+                    return true;
+                }
+
+                return false;
+            }
+
+            try
+            {
+                var converted = Convert.ToDateTime(value, CultureInfo.InvariantCulture);
+                dateTime = convertLocalToUtc ? converted.ToUniversalTime() : converted;
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                s_logger.Debug($"Failed to convert value of type '{value.GetType().Name}' with content '{value}' to DateTime.", ex);
+                return false;
             }
         }
     }

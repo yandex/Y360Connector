@@ -1,21 +1,29 @@
 ﻿using System;
-using log4net;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using log4net;
 using Y360OutlookConnector.Configuration;
-using Outlook = Microsoft.Office.Interop.Outlook;
-using Office = Microsoft.Office.Core;
 using Y360OutlookConnector.Synchronization;
 using Y360OutlookConnector.Ui;
-using System.Threading.Tasks;
+using Office = Microsoft.Office.Core;
+using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector
 {
     public partial class ThisAddIn
     {
         private static readonly int s_uiThreadId = Environment.CurrentManagedThreadId;
+
+        /// <summary>
+        /// Переключатель рендера ленты в рамках релиза: <c>true</c> — Ribbon XML, <c>false</c> — VSTO (Designer).
+        /// </summary>
+        private const bool UsePureXmlRibbon = true;
+
+        private static string s_ribbonPathDiag;
 
         public static SynchronizationContext UiContext { get; private set; }
 
@@ -34,8 +42,7 @@ namespace Y360OutlookConnector
             // Необходимо включить отслеживание получения приглашений при старте плагина, так как в противном
             // можем пропустить некоторые извещения
             var profileDataFolderPath = DataFolder.GetPathForProfile(Application.Session.CurrentProfileName);
-
-             _invitesInfo = new InvitesInfoStorage(profileDataFolderPath);
+            _invitesInfo = new InvitesInfoStorage(profileDataFolderPath);
             _invitesMonitor = new IncomingInvitesMonitor(Application, _invitesInfo);
             _invitesMonitor.Start();
 
@@ -71,6 +78,15 @@ namespace Y360OutlookConnector
             try
             {
                 InitLogging(Application);
+                s_logger.Info($"Ribbon path: {s_ribbonPathDiag ?? "not set"}");
+                s_logger.Info($"UsePureXmlRibbon: {UsePureXmlRibbon}");
+                if (string.Equals(s_ribbonPathDiag, "xml", StringComparison.Ordinal))
+                {
+                    s_logger.Info(
+                        "[ThisAddIn] RibbonXml type COM-visible: " +
+                        Marshal.IsTypeVisibleFromCom(typeof(OutlookRibbonXmlExtensibility)));
+                    s_logger.Info($"RibbonXml diag: " + OutlookRibbonXmlExtensibility.GetDiagnostics());
+                }
                 InitTelemetry(Application);
                 InitLanguage(Application);
 
@@ -175,6 +191,18 @@ namespace Y360OutlookConnector
             UiContext = SynchronizationContext.Current;
         }
 
+        protected override Office.IRibbonExtensibility CreateRibbonExtensibilityObject()
+        {
+            if (UsePureXmlRibbon)
+            {
+                s_ribbonPathDiag = "xml";
+                return new OutlookRibbonXmlExtensibility();
+            }
+
+            s_ribbonPathDiag = "vsto";
+            return base.CreateRibbonExtensibilityObject();
+        }
+
         private async Task TryApplyLastFirstFromDeploymentAsync()
         {
             try
@@ -231,7 +259,6 @@ namespace Y360OutlookConnector
                 s_logger.Warn("Failed to apply LastFirst setting from deployment flag", ex);
             }
         }
-
 
         #region VSTO generated code
 

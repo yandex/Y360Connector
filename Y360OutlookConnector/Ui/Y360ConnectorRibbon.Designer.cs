@@ -43,8 +43,13 @@
             this.SettingsButton = this.Factory.CreateRibbonButton();
             this.AboutButton = this.Factory.CreateRibbonButton();
             this.HelpButton = this.Factory.CreateRibbonButton();
+            this.tabHome = this.Factory.CreateRibbonTab();
+            this.HomeCreateGroup = this.Factory.CreateRibbonGroup();
+            this.CreateYandexMeetingFromHomeButton = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.MainGroup.SuspendLayout();
+            this.tabHome.SuspendLayout();
+            this.HomeCreateGroup.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
@@ -129,16 +134,44 @@
             this.HelpButton.ShowImage = true;
             this.HelpButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.HelpButton_Click);
             // 
+            // tabHome
+            // 
+            this.tabHome.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
+            this.tabHome.ControlId.OfficeId = "TabCalendar";
+            this.tabHome.Groups.Add(this.HomeCreateGroup);
+            this.tabHome.Label = "TabCalendar";
+            this.tabHome.Name = "tabHome";
+            // 
+            // HomeCreateGroup
+            // 
+            this.HomeCreateGroup.Items.Add(this.CreateYandexMeetingFromHomeButton);
+            this.HomeCreateGroup.Label = "Yandex Calendar";
+            this.HomeCreateGroup.Name = "HomeCreateGroup";
+            // 
+            // CreateYandexMeetingFromHomeButton
+            // 
+            this.CreateYandexMeetingFromHomeButton.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.CreateYandexMeetingFromHomeButton.Image = global::Y360OutlookConnector.Properties.Resources.YandexCalendar;
+            this.CreateYandexMeetingFromHomeButton.Label = "Создать встречу в Яндекс Календаре";
+            this.CreateYandexMeetingFromHomeButton.Name = "CreateYandexMeetingFromHomeButton";
+            this.CreateYandexMeetingFromHomeButton.ShowImage = true;
+            this.CreateYandexMeetingFromHomeButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.CreateYandexMeetingFromHomeButton_Click);
+            // 
             // Y360ConnectorRibbon
             // 
             this.Name = "Y360ConnectorRibbon";
             this.RibbonType = "Microsoft.Outlook.Explorer";
             this.Tabs.Add(this.tab1);
+            this.Tabs.Add(this.tabHome);
             this.Load += new Microsoft.Office.Tools.Ribbon.RibbonUIEventHandler(this.Y360ConnectorRibbon_Load);
             this.tab1.ResumeLayout(false);
             this.tab1.PerformLayout();
             this.MainGroup.ResumeLayout(false);
             this.MainGroup.PerformLayout();
+            this.tabHome.ResumeLayout(false);
+            this.tabHome.PerformLayout();
+            this.HomeCreateGroup.ResumeLayout(false);
+            this.HomeCreateGroup.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -146,7 +179,9 @@
         #endregion
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonTab tabHome;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup MainGroup;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup HomeCreateGroup;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SyncNowButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton LoginButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton ToolsAndLayersButton;
@@ -154,6 +189,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton AboutButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton HelpButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SyncAllNowButton;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton CreateYandexMeetingFromHomeButton;
     }
 }
 

@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using GenSync.Logging;
 using log4net;
 using Microsoft.Office.Interop.Outlook;
 using Microsoft.Office.Tools.Ribbon;
-using Y360OutlookConnector.Configuration;
 using Y360OutlookConnector.Ui.Extensions;
-using Y360OutlookConnector.Utilities;
 
 namespace Y360OutlookConnector.Ui
 {
@@ -52,10 +49,12 @@ namespace Y360OutlookConnector.Ui
             btnTelemostExternalMeeting.Label = Localization.Strings.Telemost_Toolbar_ExternalMeetingButton;
             TelemostRibbonMenu.Label = Localization.Strings.Telemost_Toolbar_RibbonMenuButton;
 
+            btnCreateEventInYandexInAppointment.Label = Localization.Strings.YandexCalendar_Toolbar_CreateEventButton;
             btnNavigateToYandexCalendarInAppointment.Label = Localization.Strings.YandexCalendar_Toolbar_NavigateToCalendarButton;
             btnEditEventInAppointment.Label = Localization.Strings.YandexCalendar_Toolbar_EditEventButton;
             YandexCalendarRibbonMenu.Label = Localization.Strings.YandexCalendar_Toolbar_RibbonToolbarButton;
 
+            btnCreateEventInYandexInSchedulingAssistant.Label = Localization.Strings.YandexCalendar_Toolbar_CreateEventButton;
             SchedulingAssistantTabYandexCalendarMenu.Label = Localization.Strings.YandexCalendar_Toolbar_RibbonToolbarButton;
             btnNavigateToYandexCalendarInSchedulingAssistant.Label = Localization.Strings.YandexCalendar_Toolbar_NavigateToCalendarButton;
             btnEditEventInSchedulingAssistant.Label = Localization.Strings.YandexCalendar_Toolbar_EditEventButton;
@@ -98,19 +97,7 @@ namespace Y360OutlookConnector.Ui
 
         private async Task CreateOrUpdateMeetingAsync(Inspector inspector, bool isMeetingInternal)
         {
-            s_logger.Info(isMeetingInternal ? "CreateOrUpdateInternalMeeting" : "CreateOrUpdateExternalMeeting");
-
-            if (inspector == null)
-            {
-                return;
-            }
-
-            if (!(inspector.CurrentItem is AppointmentItem currentAppointment))
-            {
-                return;
-            }                        
-
-            await currentAppointment.CreateOrUpdateMeetingAsync(isMeetingInternal);            
+            await YandexCalendarAppointmentActions.CreateOrUpdateMeetingForInspectorAsync(inspector, isMeetingInternal);
         }
 
         private AppointmentItem CurrentAppointment
@@ -131,127 +118,9 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
-        private bool IsUserOrganizer(string outlookEmail)
-        {
-            var currentAppointment = CurrentAppointment;
-
-            if (currentAppointment == null)
-            {
-                return false;
-            }
-
-            var organizerEmail = currentAppointment.GetOrganizerEmailAddress(NullEntitySynchronizationLogger.Instance);
-
-            if (EmailAddress.AreSame(organizerEmail, outlookEmail))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Получить ссылку на событие в календаре по текущей встрече
-        /// </summary>
-        /// <returns></returns>
         private async Task<string> GetEventUrlAsync()
         {
-            if (!_loginController.IsUserLoggedIn)
-            {
-                s_logger.Info("User is not logged in. Can not get event url.");
-                return null;
-            }
-
-            var currentAppointment = CurrentAppointment;
-            if (currentAppointment == null)
-            {
-                return null;
-            }
-
-            var uid = AppointmentItemUtils.ExtractUidFromGlobalId(currentAppointment.GlobalAppointmentID);
-            if (string.IsNullOrEmpty(uid))
-            {
-                return null;
-            }
-
-            var syncFolder = currentAppointment.GetFolder();
-            if (syncFolder == null)
-            {
-                s_logger.Info($"Fail to get folder for appointment with id={uid}");
-                return null;
-            }
-
-            var outlookEmail = syncFolder.GetAccount();
-            if (String.IsNullOrEmpty(outlookEmail))
-            {
-                s_logger.Info($"Fail to get account for folder={syncFolder.Name}");
-                return null;
-            }
-            var recState = currentAppointment.GetRecurrenceState();
-
-            var isException = recState == OlRecurrenceState.olApptException;
-          
-            var isEventSequence = recState == OlRecurrenceState.olApptMaster;
-
-            var config = ThisAddIn.Components.SyncManager.GetSyncTargetConfig(syncFolder.EntryID);
-            var layerId = config?.GetLayerId();
-            if (string.IsNullOrEmpty(layerId))
-            {
-                s_logger.Info($"Fail to get layerId for appointment with id={uid}");
-                return null;
-            }
-
-            // Получаем данные по встрече из календаря, чтобы получить event url
-            var webDavClient = ThisAddIn.Components.SyncManager.CreateWebDavClient();
-
-            var entity = await webDavClient.GetEntityAsync(uid, config.Url);
-
-            if (entity == null)
-            {
-                return null;
-            }
-
-            Uri eventUrl;
-
-            if (isEventSequence)
-            {
-                // Ищем мастер событие
-                eventUrl = entity.GetMasterEventUrl();
-            }
-            else
-            {
-                if (isException)
-                {
-                    // Ищем исключение по дате
-                    eventUrl = entity.GetEventExceptionByStartDateUrl(currentAppointment.StartUTC);
-                }
-                else
-                {
-                    // Ищем мастер событие
-                    eventUrl = entity.GetMasterEventUrl();
-                }
-            }
-
-            if (eventUrl == null)
-            {
-                s_logger.Info($"Fail to get event url for appointment {uid}");
-                return null;
-            }
-
-            var isUserOrganizer = IsUserOrganizer(outlookEmail);
-            if (!isUserOrganizer)
-            {
-                if (!AppConfig.IsAlwaysEnableEditEventButton)
-                {
-                    if (!entity.CanParticipantsEditEvent())
-                    {
-                        s_logger.Info($"User is not the organizer and participants can not edit event. Edit event is not allowed. Appointment id = {uid}");
-                        return null;
-                    }
-                }
-            }
-
-            return currentAppointment.CreateCalendarUrl(eventUrl, _loginController.UserInfo.UserId, layerId, isEventSequence);           
+            return await YandexCalendarAppointmentActions.GetCalendarEditUrlAsync(CurrentAppointment, _loginController);
         }
 
         #region Event handlers
@@ -306,46 +175,18 @@ namespace Y360OutlookConnector.Ui
             s_logger.Info("ShowSettings");
 
 
-            if (!(e.Control.Context is Inspector currentInspector))
+            var inspector = e.Control.Context as Inspector;
+            if (inspector == null)
             {
                 return;
             }
 
-            if (!(currentInspector.CurrentItem is AppointmentItem currentAppointment))
-            {
-                return;
-            }
-
-            var customTaskPane = await ThisAddIn.Components.PaneController.GetOrCreateSettingsPaneAsync(currentInspector);
-
-            if (customTaskPane == null)
-            {
-                return;
-            }
-
-            var settingsControl = customTaskPane.Control as ITelemostSettingsControl;
-            settingsControl?.UpdateMeetingInfo(currentAppointment.GetMeetingInfo());
-
-            customTaskPane.Visible = true;
+            await YandexCalendarAppointmentActions.XmlTelemostOpenSettingsAsync(inspector);
         }
 
         private void NavigateToYandexCalendar_Click(object sender, RibbonControlEventArgs e)
         {
-            var url = "https://calendar.yandex.ru";
-
-            var userId = _loginController?.UserInfo?.UserId;
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                url += $"?uid={userId}";
-            }
-            var startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            };
-
-            System.Diagnostics.Process.Start(startInfo);
+           YandexCalendarAppointmentActions.XmlNavigateToYandexCalendar();
         }
 
         private void EditEvent_Click(object sender, RibbonControlEventArgs e)
@@ -364,6 +205,12 @@ namespace Y360OutlookConnector.Ui
             System.Diagnostics.Process.Start(startInfo);
         }
 
+        private void CreateEventInYandexCalendar_Click(object sender, RibbonControlEventArgs e)
+        {
+            var inspector = e.Control.Context as Inspector;
+            var appointment = OutlookInspectorAppointmentHelper.TryGetAppointmentItemFromInspector(inspector);
+            YandexCalendarAppointmentActions.CreateEventInYandexCalendarForAppointment(appointment, _loginController);
+        }
         #endregion
     }
 }

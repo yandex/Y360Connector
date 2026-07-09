@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Y360OutlookConnector.Configuration;
 
 namespace Y360OutlookConnector.Ui
 {
@@ -24,6 +25,8 @@ namespace Y360OutlookConnector.Ui
         public WebView2RuntimeRequiredWindow()
         {
             InitializeComponent();
+            BusinessHelpHyperLink.NavigateUri = new Uri(EndpointConfig.HelpUrlBusiness);
+            CustomersHelpHyperLink.NavigateUri = new Uri(EndpointConfig.HelpUrlCustomers);
         }
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)

@@ -194,6 +194,8 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
 
         public async Task<EntityVersion<AppointmentId, DateTime>> TryUpdate(AppointmentId entityId, DateTime version, IAppointmentItemWrapper entityToUpdate, Func<IAppointmentItemWrapper, Task<IAppointmentItemWrapper>> entityModifier, IEventSynchronizationContext context, IEntitySynchronizationLogger logger)
         {
+            SyncWriteTracker.RegisterSyncWrite(entityId.EntryId);
+
             try
             {
                 var result = await Inner.TryUpdate(entityId, version, entityToUpdate, entityModifier, context, logger);
@@ -222,6 +224,10 @@ namespace Y360OutlookConnector.Synchronization.Synchronizer
                 s_logger.Error($"Failed to update an event with Id {entityId.EntryId}. Marking it as failed.", exc);
                 _failedEntityTracker.AddFailedEntity(entityId.EntryId, "Event", exc);
                 throw;
+            }
+            finally
+            {
+                SyncWriteTracker.UnregisterSyncWrite(entityId.EntryId);
             }
         }
 

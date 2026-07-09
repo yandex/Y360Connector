@@ -507,4 +507,7 @@
   <data name="YandexCalendar_Toolbar_RibbonToolbarButton" xml:space="preserve">
     <value />
   </data>
+    <data name="YandexCalendar_Toolbar_CreateEventButton" xml:space="preserve">
+    <value />
+  </data>
 </root>

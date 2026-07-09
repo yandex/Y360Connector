@@ -121,14 +121,23 @@ namespace Y360OutlookConnector.Utilities
 
         public static DateTime GetLastChangeTime(AppointmentItem appointment)
         {
+            return GetLastChangeTimeWithSource(appointment).LastChangeTime;
+        }
+
+        public static (DateTime LastChangeTime, string Source) GetLastChangeTimeWithSource(AppointmentItem appointment)
+        {
             var lastChangeTime = appointment.LastModificationTime.ToUniversalTime();
+            var sourceHint = "LastModificationTime";
             using (var wrapper = GenericComObjectWrapper.Create(appointment.PropertyAccessor))
             {
                 try
                 {
                     var ownerCriticalChangeTime = (DateTime)wrapper.Inner.GetProperty(LID_OWNER_CRITICAL_CHANGE);
                     if (ownerCriticalChangeTime > lastChangeTime)
+                    {
                         lastChangeTime = ownerCriticalChangeTime;
+                        sourceHint = "OwnerCriticalChangeTime";
+                    }
 
                 }
                 catch
@@ -140,7 +149,10 @@ namespace Y360OutlookConnector.Utilities
                 {
                     var appointmentReplyTime = (DateTime)wrapper.Inner.GetProperty(PidLidAppointmentReplyTime);
                     if (appointmentReplyTime > lastChangeTime)
+                    {
                         lastChangeTime = appointmentReplyTime;
+                        sourceHint = "AppointmentReplyTime";
+                    }
                 }
                 catch
                 {
@@ -148,7 +160,7 @@ namespace Y360OutlookConnector.Utilities
                 }
             }
 
-            return lastChangeTime;
+            return (lastChangeTime, sourceHint);
         }
 
         public static string CreateCalendarUrl(this AppointmentItem appointment, Uri eventUrl, string userId, string layerId, bool isEventSequence)
