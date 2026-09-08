@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Y360OutlookConnector.Configuration;
@@ -37,6 +38,7 @@ namespace Y360OutlookConnector.Synchronization
             new ConcurrentDictionary<string, IOutlookId>();
 
         private int _isRunning;
+        private int _errorScope;
 
         public SyncTargetRunner(
             SynchronizerFactory synchronizerFactory,
@@ -72,7 +74,12 @@ namespace Y360OutlookConnector.Synchronization
                         s_logger.Info($"Marked entity for retry: {entity.EntityType} - {entity.EntityId}");
                     }
 
+                    var errorScope = _errorScope;
                     await Task.Delay(TimeSpan.FromSeconds(15));
+                    if (errorScope != _errorScope)
+                    {
+                        return;
+                    }
 
                     if (_data.TargetKind == SyncTargetType.Calendar)
                     {
@@ -85,7 +92,7 @@ namespace Y360OutlookConnector.Synchronization
                                 .Select(e => CreateOutlookId(e.EntityId, e.EntityType))
                                 .ToArray();
                             s_logger.Info($"Retrying '{outlookIds.Length}' failed calendar events for target '{_data.Name}'");
-                            await RunPartialNoThrow(outlookIds);
+                            await RunPartialNoThrow(outlookIds, errorScope);
                         }
                     }
                 }
@@ -159,10 +166,18 @@ namespace Y360OutlookConnector.Synchronization
 
         public void Cancel()
         {
+            Interlocked.Increment(ref _errorScope);
+            _partialSyncTimer.Stop();
+
             if (!_data.IsEmpty)
                 _data.FolderMonitor.ItemChanged -= FolderMonitor_ItemChanged;
 
             _data.Reset();
+        }
+
+        private void HandleRunnerException(Exception exception, int errorScope)
+        {
+            SyncErrorHandler.HandleException(exception, true, () => errorScope == _errorScope);
         }
 
         private void FolderMonitor_ItemChanged(object sender, FolderMonitorItemChangedEventArgs e)
@@ -211,6 +226,7 @@ namespace Y360OutlookConnector.Synchronization
         public async Task<bool> RunAndRescheduleNoThrow(bool wasManuallyTriggered, string ctag)
         {
             bool result = false;
+            var errorScope = _errorScope;
             try
             {
                 if (!_data.Active)
@@ -237,7 +253,7 @@ namespace Y360OutlookConnector.Synchronization
             }
             catch (Exception exc)
             {
-                SyncErrorHandler.HandleException(exc);
+                HandleRunnerException(exc, errorScope);
                 _prevCTag = String.Empty;
             }
             return result;
@@ -247,15 +263,21 @@ namespace Y360OutlookConnector.Synchronization
         {
             if (Interlocked.CompareExchange(ref _isRunning, 1, 0) == 0)
             {
+                var errorScope = _errorScope;
                 try
                 {
                     while (_fullSyncPending || _pendingOutlookItems.Count > 0)
                     {
+                        if (errorScope != _errorScope)
+                        {
+                            break;
+                        }
+
                         if (_fullSyncPending)
                         {
                             _fullSyncPending = false;
                             Thread.MemoryBarrier();
-                            await RunFullNoThrow();
+                            await RunFullNoThrow(errorScope);
                         }
 
                         if (_pendingOutlookItems.Count > 0)
@@ -269,7 +291,7 @@ namespace Y360OutlookConnector.Synchronization
                             }
 
                             Thread.MemoryBarrier(); // should not be required because there is just one thread entering multiple times
-                            await RunPartialNoThrow(itemsToSync);
+                            await RunPartialNoThrow(itemsToSync, errorScope);
                         }
                     }
                 }
@@ -280,7 +302,7 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        private async Task RunFullNoThrow()
+        private async Task RunFullNoThrow(int errorScope)
         {
             try
             {
@@ -298,7 +320,7 @@ namespace Y360OutlookConnector.Synchronization
                     }
                     catch (Exception exc)
                     {
-                        SyncErrorHandler.HandleException(exc);
+                       HandleRunnerException(exc, errorScope);
                     }
 
                     GC.Collect();
@@ -311,7 +333,7 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        public async Task RunPartialNoThrow(IOutlookId[] itemsToSync)
+        private async Task RunPartialNoThrow(IOutlookId[] itemsToSync, int errorScope)
         {
             try
             {
@@ -329,7 +351,7 @@ namespace Y360OutlookConnector.Synchronization
                     }
                     catch (Exception exc)
                     {
-                        SyncErrorHandler.HandleException(exc);
+                        HandleRunnerException(exc, errorScope);
                     }
 
                     GC.Collect();
@@ -338,7 +360,7 @@ namespace Y360OutlookConnector.Synchronization
             }
             catch (Exception exc)
             {
-                SyncErrorHandler.HandleException(exc);
+                HandleRunnerException(exc, errorScope);
             }
         }
 

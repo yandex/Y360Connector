@@ -121,7 +121,7 @@ namespace Y360OutlookConnector.Synchronization
             return null;
         }
 
-        public async Task<bool> RunSynchronization(bool wasManuallyTriggered, bool noDateConstraint, Dictionary<Guid,string> ctags)
+        public async Task<bool> RunSynchronization(bool wasManuallyTriggered, bool noDateConstraint, Dictionary<Guid,string> ctags, Func<bool> shouldApply)
         {
             bool result = false;
 
@@ -136,6 +136,7 @@ namespace Y360OutlookConnector.Synchronization
                 }
                 using (var syncSession = new SyncSessionProgress(_totalProgressFactory, wasManuallyTriggered))
                 {
+                    var runnersById = _runnersById;
                     var alreadyRan = new HashSet<Guid>();
                     while (true)
                     {
@@ -143,7 +144,7 @@ namespace Y360OutlookConnector.Synchronization
                         if (!wasManuallyTriggered)
                             timePoint = DateTime.UtcNow;
 
-                        var runner = GetNextRunner(alreadyRan, _runnersById, timePoint);
+                        var runner = GetNextRunner(alreadyRan, runnersById, timePoint);
                         if (runner == null)
                             break;
 
@@ -162,7 +163,7 @@ namespace Y360OutlookConnector.Synchronization
             }
             catch (Exception exc)
             {
-                SyncErrorHandler.HandleException(exc);
+                SyncErrorHandler.HandleException(exc, true, shouldApply);
             }
             finally
             {

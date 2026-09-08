@@ -62,6 +62,26 @@ namespace Y360OutlookConnector.Configuration
             return pref.Active;
         }
 
+        public Dictionary<string, bool> GetActiveSnapshot(string userEmail)
+        {
+            var result = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var user = FindUser(userEmail);
+            if (user == null)
+            {
+                return result;
+            }
+
+            foreach (var target in user.Targets)
+            {
+                if (!String.IsNullOrEmpty(target.Url))
+                {
+                    result[target.Url] = target.Active;
+                }
+            }
+
+            return result;
+        }
+
         public void SaveAll(string userEmail, List<SyncTargetConfig> configs)
         {
             var user = FindOrCreateUser(userEmail);

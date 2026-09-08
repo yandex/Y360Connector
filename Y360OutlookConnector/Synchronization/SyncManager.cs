@@ -1,27 +1,43 @@
-﻿using CalDavSynchronizer.DataAccess;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using CalDavSynchronizer.Ui;
-using log4net;
-using Y360OutlookConnector.Configuration;
-using Outlook = Microsoft.Office.Interop.Outlook;
-using Y360OutlookConnector.Clients;
-using System.Linq;
-using CalDavSynchronizer.ChangeWatching;
-using CalDavSynchronizer.Implementation.Events;
-using CalDavSynchronizer.Utilities;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
+using CalDavSynchronizer.ChangeWatching;
+using CalDavSynchronizer.DataAccess;
+using CalDavSynchronizer.Implementation.ComWrappers;
+using CalDavSynchronizer.Implementation.Events;
+using CalDavSynchronizer.Ui;
+using CalDavSynchronizer.Ui.ConnectionTests;
+using CalDavSynchronizer.Utilities;
+using log4net;
+using Y360OutlookConnector.Clients;
+using Y360OutlookConnector.Configuration;
+using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace Y360OutlookConnector.Synchronization
 {
     public class SyncManager : IDisposable
     {
         private static readonly ILog s_logger = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+        private sealed class SyncTargetsUpdateResult
+        {
+            public List<SyncTargetInfo> Targets { get; }
+            public Dictionary<Guid, string> CTags { get; }
+
+            public SyncTargetsUpdateResult(
+                List<SyncTargetInfo> targets,
+                Dictionary<Guid, string> ctags)
+            {
+                Targets = targets;
+                CTags = ctags;
+            }
+        }
 
         private readonly LoginController _loginController;
         private readonly string _dataFolderPath;
@@ -32,10 +48,15 @@ namespace Y360OutlookConnector.Synchronization
         private readonly System.Windows.Forms.Timer _timer;
         private readonly InvitesInfoStorage _invitesInfo;
         private readonly IUserEmailService _userEmailService;
+        private readonly SemaphoreSlim _schedulerRunLock = new SemaphoreSlim(1, 1);
 
-        private Task<List<SyncTargetInfo>> _syncTargetsTask;
+        private volatile Task<List<SyncTargetInfo>> _syncTargetsTask;
+        private TaskCompletionSource<bool> _syncTargetsReplaced;
         private DateTime _syncStartTime;
         private List<SyncTargetInfo> _cachedSyncTargets;
+        private string _cachedSyncTargetsUserEmail;
+        private int _syncTargetsUpdateGeneration;
+        private int _syncSessionEpoch;
         private Dictionary<Guid, string> _ctags;
 
 
@@ -56,6 +77,8 @@ namespace Y360OutlookConnector.Synchronization
             _dataFolderPath = dataFolderPath;
 
             _ctags = new Dictionary<Guid, string>();
+            _syncTargetsReplaced = CreateSyncTargetsReplacedSource();
+            _syncTargetsTask = Task.FromResult(new List<SyncTargetInfo>());
             Status = new SyncStatus();
 
 
@@ -126,6 +149,7 @@ namespace Y360OutlookConnector.Synchronization
         {
             _invitesInfo.Save();
             _timer?.Dispose();
+            _schedulerRunLock.Dispose();
         }
 
         private void OnProxyOptionsChanged(object sender, EventArgs e)
@@ -140,26 +164,44 @@ namespace Y360OutlookConnector.Synchronization
 
         public void ApplySyncConfig(List<SyncTargetInfo> syncTargets, bool savePrefs = false)
         {
-            UserEmail = _loginController.UserInfo.Email;
-            var userCommonName = _loginController.UserInfo.RealName;
+            if (!_loginController.IsUserLoggedIn || _loginController.UserInfo == null)
+            {
+                return;
+            }
 
-            _syncConfig.SelectUser(UserEmail);
+            var userEmail = _loginController.UserInfo.Email;
+            var userCommonName = _loginController.UserInfo.RealName;
+            Interlocked.Increment(ref _syncTargetsUpdateGeneration);
+
+            ApplySyncConfigCore(syncTargets, userEmail, userCommonName, savePrefs);
+        }
+
+        private void ApplySyncConfigCore(
+            List<SyncTargetInfo> syncTargets,
+            string userEmail,
+            string userCommonName,
+            bool savePrefs = false)
+        {
+            UserEmail = userEmail;
+
+            _syncConfig.SelectUser(userEmail);
             _syncConfig.SetConfig(syncTargets.ConvertAll(x => x.Config));
 
             if (savePrefs)
             {
-                _syncPrefs.SaveAll(UserEmail, syncTargets.ConvertAll(x => x.Config));
+                _syncPrefs.SaveAll(userEmail, syncTargets.ConvertAll(x => x.Config));
             }
 
-            if (_cachedSyncTargets != null)
+            if (_cachedSyncTargets != null && String.Equals(_cachedSyncTargetsUserEmail, userEmail, StringComparison.OrdinalIgnoreCase))
             {
                 CleanupEntityCaches(_cachedSyncTargets, syncTargets);
             }
 
-            _cachedSyncTargets = new List<SyncTargetInfo>(syncTargets);
-            _syncTargetsTask = Task.FromResult(new List<SyncTargetInfo>(_cachedSyncTargets));
+            _cachedSyncTargets = syncTargets.ConvertAll(x => x.Clone());
+            _cachedSyncTargetsUserEmail = userEmail;
+            PublishSyncTargetsTask(Task.FromResult(_cachedSyncTargets.ConvertAll(x => x.Clone())));
 
-            _scheduler.ApplySettings(syncTargets, UserEmail, userCommonName);
+            _scheduler.ApplySettings(syncTargets, userEmail, userCommonName);
         }
 
         private void CleanupEntityCaches(List<SyncTargetInfo> oldTargets, IReadOnlyCollection<SyncTargetInfo> newTargets)
@@ -213,25 +255,69 @@ namespace Y360OutlookConnector.Synchronization
             return _httpClientFactory.CreateWebDavClient(new CancellationTokenSource());
         }
 
-        public Task<List<SyncTargetInfo>> GetSyncTargets()
+        public async Task<List<SyncTargetInfo>> GetSyncTargets()
         {
-            return _syncTargetsTask;
+            while (true)
+            {
+                var replaced = Volatile.Read(ref _syncTargetsReplaced);
+                var task = _syncTargetsTask;
+                await Task.WhenAny(task, replaced.Task);
+                if (!ReferenceEquals(task, _syncTargetsTask))
+                {
+                    continue;
+                }
+                if (!task.IsCompleted)
+                {
+                    continue;
+                }
+
+                var result = await task;
+                return result ?? new List<SyncTargetInfo>();
+            }
         }
 
         public async Task RunSynchronization(bool manuallyTriggered = false, bool noDateConstraint = false)
         {
             bool isBlankShot = false;
+            bool started = false;
+            bool lockTaken = false;
+            List<SyncTargetInfo> targetsSnapshot = null;
+            var sessionEpoch = _syncSessionEpoch;
             try
             {
-                OnSyncStarted();
+                ThisAddIn.RestoreUiContext();
+                int appliedGeneration = await UpdateSyncTargetsAsync(manuallyTriggered);
+                if (appliedGeneration < 0 || !IsCurrentDiscovery(sessionEpoch, appliedGeneration))
+                {
+                    return;
+                }
+
+                targetsSnapshot = CloneSyncTargets(_cachedSyncTargets);
+                var ctagsSnapshot = _ctags != null ? new Dictionary<Guid, string>(_ctags) : new Dictionary<Guid, string>();
 
                 await FetchUserEmailsAsync();
+                if (!IsCurrentDiscovery(sessionEpoch, appliedGeneration))
+                {
+                    return;
+                }
 
-                ThisAddIn.RestoreUiContext();
-                await UpdateSyncTargetsAsync(manuallyTriggered);
-                isBlankShot = await _scheduler.RunSynchronization(manuallyTriggered, noDateConstraint, _ctags) == false;
+                await _schedulerRunLock.WaitAsync();
+                lockTaken = true;
+                if (!IsCurrentDiscovery(sessionEpoch, appliedGeneration))
+                {
+                    return;
+                }
 
-                await RetryFailedEntities();
+                OnSyncStarted();
+                started = true;
+
+                isBlankShot = await _scheduler.RunSynchronization(manuallyTriggered, noDateConstraint, ctagsSnapshot, () => IsCurrentSyncSession(sessionEpoch)) == false;
+                if (!IsCurrentDiscovery(sessionEpoch, appliedGeneration))
+                {
+                    return;
+                }
+
+                await RetryFailedEntities(targetsSnapshot);
             }
             catch (Exception exc)
             {
@@ -239,7 +325,15 @@ namespace Y360OutlookConnector.Synchronization
             }
             finally
             {
-                OnSyncFinished(isBlankShot);
+                if (started && IsCurrentSyncSession(sessionEpoch))
+                {
+                    OnSyncFinished(isBlankShot, targetsSnapshot);
+                }
+
+                if (lockTaken)
+                {
+                    _schedulerRunLock.Release();
+                }
             }
         }
 
@@ -259,7 +353,7 @@ namespace Y360OutlookConnector.Synchronization
             Status.OnSynchronizationStarted(targetIds);
         }
 
-        private void OnSyncFinished(bool isBlankShot)
+        private void OnSyncFinished(bool isBlankShot, List<SyncTargetInfo> syncTargets)
         {
             try
             {
@@ -272,7 +366,7 @@ namespace Y360OutlookConnector.Synchronization
 
                     s_logger.Info($"Sync complete. Duration: {duration}");
 
-                    Status.SendReportsTelemetry(_syncTargetsTask.Result);
+                    Status.SendReportsTelemetry(syncTargets ?? new List<SyncTargetInfo>());
 
                     _invitesInfo.CleanUp();
                     _invitesInfo.Save();
@@ -286,6 +380,7 @@ namespace Y360OutlookConnector.Synchronization
 
         private void LoginController_LoginStateChanged(object sender, LoginStateEventArgs e)
         {
+            Interlocked.Increment(ref _syncSessionEpoch);
             s_logger.Info($"LoginController_LoginStateChanged called: IsUserLoggedIn = {e.IsUserLoggedIn}");
 
             if (e.IsUserLoggedIn)
@@ -293,7 +388,7 @@ namespace Y360OutlookConnector.Synchronization
                 s_logger.Info("User logged in, fetching user emails");
                 _ = FetchUserEmailsAsync();
 
-                if (AppConfig.IsAutoSyncEnabled)
+                if (AppConfig.IsAutoSyncEnabled && !AutoSyncDisabled)
                 {
                     s_logger.Info("Sync triggered by user log-in");
                     _ = OnAutoSync();
@@ -301,6 +396,7 @@ namespace Y360OutlookConnector.Synchronization
                 else
                 {
                     s_logger.Warn("Auto-sync is disabled");
+                    _ = UpdateSyncTargetsAsync(false);
                 }
             }
             else
@@ -311,6 +407,8 @@ namespace Y360OutlookConnector.Synchronization
                 Status.Reset();
 
                 _userEmailService.ClearCache();
+                ClearCachedSyncTargets();
+                Ui.SyncConfigWindow.CloseCurrent();
             }
         }
 
@@ -346,61 +444,124 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        private async Task UpdateSyncTargetsAsync(bool manuallyTriggered)
+        private async Task<int> UpdateSyncTargetsAsync(bool manuallyTriggered)
         {
             if (!_loginController.IsUserLoggedIn)
             {
-                return;
+                return -1;
             }
 
-            UserEmail = _loginController.UserInfo.Email;
-            _syncConfig.SelectUser(UserEmail);
+            var userEmail = _loginController.UserInfo.Email;
+            var userCommonName = _loginController.UserInfo.RealName;
+            UserEmail = userEmail;
+            _syncConfig.SelectUser(userEmail);
+
+            var updateGeneration = Interlocked.Increment(ref _syncTargetsUpdateGeneration);
+
+            // Snapshot on the UI thread before Task.Run. Use it only for the same account
+            // so logout -> login of another user cannot reuse the previous cache.
+            List<SyncTargetInfo> cachedSyncTargetsSnapshot = null;
+            if (_cachedSyncTargets != null && String.Equals(_cachedSyncTargetsUserEmail, userEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                cachedSyncTargetsSnapshot = _cachedSyncTargets.ConvertAll(x => x.Clone());
+            }
+
+            List<SyncTargetConfig> persistedConfigsSnapshot;
+            var allConfigsSnapshot = _syncConfig.GetAllConfigs();
+            if (!allConfigsSnapshot.TryGetValue(userEmail, out persistedConfigsSnapshot) || persistedConfigsSnapshot == null)
+            {
+                persistedConfigsSnapshot = new List<SyncTargetConfig>();
+            }
+
+            var configsByUrlSnapshot = new Dictionary<string, SyncTargetConfig>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in persistedConfigsSnapshot)
+            {
+                if (!String.IsNullOrEmpty(config.Url))
+                {
+                    configsByUrlSnapshot[config.Url] = config;
+                }
+            }
+
+            var activePrefsSnapshot = _syncPrefs.GetActiveSnapshot(userEmail);
 
             var task = Task.Run(async () =>
             {
-                var result = new List<SyncTargetInfo>();
 
                 var webDavClient = _httpClientFactory.CreateWebDavClient(new CancellationTokenSource());
-                var calDavTargets = await GetCalDavResources(webDavClient);
-                var cardDavTargets = await GetCardDavResources(webDavClient);
+                var calDavResult = await GetCalDavResources(webDavClient, configsByUrlSnapshot, activePrefsSnapshot);
+                var cardDavTargets = await GetCardDavResources(webDavClient, configsByUrlSnapshot, activePrefsSnapshot);
 
-                result.AddRange(calDavTargets);
-                result.AddRange(cardDavTargets);
+                // Empty CardDAV discovery is often a transient failure (empty/invalid PROPFIND),
+                // not "user has no address books". Overwriting sync_config without contacts
+                // regenerates GUIDs and creates duplicate Outlook folders on the next success.
+                if (cardDavTargets.Count == 0)
+                {
+                    var preservedContacts = PreserveExistingContactTargetsIfAny(cachedSyncTargetsSnapshot, persistedConfigsSnapshot);
+                    if (preservedContacts.Count > 0)
+                    {
+                        cardDavTargets = preservedContacts;
+                    }
+                }
 
-                foreach (var item in result)
+                calDavResult.Targets.AddRange(cardDavTargets);
+
+                foreach (var item in calDavResult.Targets)
                 {
                     s_logger.Debug($"Sync target: {item.Id} - {item.Name} - {item.Config.Url}");
                 }
 
-                // At this point, we are pretty sure that there is no critical error
-                // (such as a proxy error, or no internet)
-                ThisAddIn.UiContext.Post(_ => Status.SetCriticalError(CriticalError.None), null);
-
-                return result;
+                return calDavResult;
             });
 
             ThisAddIn.RestoreUiContext();
-            _syncTargetsTask = task.ContinueWith(t =>
+            var publishedTask = task.ContinueWith(t =>
             {
+                if (!ShouldApplySyncTargetsUpdate(updateGeneration, userEmail))
+                {
+                    return _cachedSyncTargets;
+                }
+
                 try
                 {
-                    _cachedSyncTargets = t.Result;
-                    AutoPopulateConfig(_cachedSyncTargets, UserEmail);
+                    var result = t.GetAwaiter().GetResult();
+                    if (!ShouldApplySyncTargetsUpdate(updateGeneration, userEmail))
+                    {
+                        return _cachedSyncTargets;
+                    }
+
+                    ResolveMissingContactNames(result.Targets);
+                    AutoPopulateConfig(result.Targets, userEmail, userCommonName);
+                    _ctags = result.CTags;
+                    Status.SetCriticalError(CriticalError.None);
                 }
                 catch (Exception exc)
                 {
-                    SyncErrorHandler.HandleException(exc, !manuallyTriggered);
+                    if (ShouldApplySyncTargetsUpdate(updateGeneration, userEmail))
+                    {
+                        SyncErrorHandler.HandleException(
+                            exc,
+                            !manuallyTriggered,
+                            () => ShouldApplySyncTargetsUpdate(updateGeneration, userEmail));
+                    }
                 }
                 return _cachedSyncTargets;
             },
             TaskScheduler.FromCurrentSynchronizationContext());
 
-            await _syncTargetsTask;
+            PublishSyncTargetsTask(publishedTask);
+            await publishedTask;
+            if (!ShouldApplySyncTargetsUpdate(updateGeneration, userEmail))
+            {
+                return -1;
+            }
+
+            return updateGeneration;
         }
 
-        private void AutoPopulateConfig(List<SyncTargetInfo> syncTargets, string userEmail)
+        private void AutoPopulateConfig(List<SyncTargetInfo> syncTargets, string userEmail, string userCommonName)
         {
             var session = ThisAddIn.Components.OutlookApplication.Session;
+            _syncConfig.SelectUser(userEmail);
 
             var accountFolders = new AccountFolders(userEmail, session);
             foreach (var item in syncTargets)
@@ -434,10 +595,11 @@ namespace Y360OutlookConnector.Synchronization
                 item.Config.Active = folderAssigned;
             }
 
-            ApplySyncConfig(syncTargets);
+            ApplySyncConfigCore(syncTargets, userEmail, userCommonName);
         }
 
-        private async Task<List<SyncTargetInfo>> GetCalDavResources(IWebDavClient webDavClient)
+        private async Task<SyncTargetsUpdateResult> GetCalDavResources(IWebDavClient webDavClient, IReadOnlyDictionary<string, SyncTargetConfig> configsByUrl,
+            IReadOnlyDictionary<string, bool> activePrefs)
         {
             var calDavDataProvider = new CalDavResourcesDataAccess(new Uri(EndpointConfig.CalDavBaseUrl), webDavClient);
             var resources = await calDavDataProvider.GetResources();
@@ -448,7 +610,7 @@ namespace Y360OutlookConnector.Synchronization
             int calendarsCounter = 0;
             foreach (var calendar in resources.CalendarResources)
             {
-                var targetConfig = GetSyncTargetConfig(calendar.Uri);
+                var targetConfig = GetSyncTargetConfig(calendar.Uri, configsByUrl, activePrefs);
                 items.Add(new SyncTargetInfo(targetConfig)
                 {
                     TargetType = SyncTargetType.Calendar,
@@ -462,7 +624,7 @@ namespace Y360OutlookConnector.Synchronization
             int taskListCounter = 0;
             foreach (var taskList in resources.TaskListResources)
             {
-                var targetConfig = GetSyncTargetConfig(new Uri(taskList.Id));
+                var targetConfig = GetSyncTargetConfig(new Uri(taskList.Id), configsByUrl, activePrefs);
                 items.Add(new SyncTargetInfo(targetConfig)
                 {
                     TargetType = SyncTargetType.Tasks,
@@ -474,11 +636,11 @@ namespace Y360OutlookConnector.Synchronization
                 taskListCounter++;
             }
 
-            _ctags = ctags;
-            return items;
+            return new SyncTargetsUpdateResult(items, ctags);
         }
 
-        private async Task<List<SyncTargetInfo>> GetCardDavResources(IWebDavClient webDavClient)
+        private async Task<List<SyncTargetInfo>> GetCardDavResources(IWebDavClient webDavClient, IReadOnlyDictionary<string, SyncTargetConfig> configsByUrl,
+            IReadOnlyDictionary<string, bool> activePrefs)
         {
             var calDavDataAccess = new CardDavDataAccess(new Uri(EndpointConfig.CardDavBaseUrl), webDavClient, string.Empty, contentType => true);
             var resources = await calDavDataAccess.GetUserAddressBooksNoThrow(false);
@@ -487,7 +649,7 @@ namespace Y360OutlookConnector.Synchronization
             int counter = 0;
             foreach (var addressBook in resources)
             {
-                var targetConfig = GetSyncTargetConfig(addressBook.Uri);
+                var targetConfig = GetSyncTargetConfig(addressBook.Uri, configsByUrl, activePrefs);
                 items.Add(new SyncTargetInfo(targetConfig)
                 {
                     TargetType = SyncTargetType.Contacts,
@@ -498,35 +660,192 @@ namespace Y360OutlookConnector.Synchronization
                 counter++;
             }
 
-            ThisAddIn.UiContext.Send(x =>
+            foreach (var item in items)
             {
-                foreach (var item in items)
-                    item.Name = GetContactsResourceDisplayName(item.Name);
-            },
-            null);
+                item.Name = GetContactsResourceDisplayName(item.Name);
+            }
 
             return items;
         }
 
-        private SyncTargetConfig GetSyncTargetConfig(Uri url)
+        private bool ShouldApplySyncTargetsUpdate(int updateGeneration, string userEmail)
         {
-            var config = _syncConfig.GetSyncTargetByUrl(url);
+            if (updateGeneration != _syncTargetsUpdateGeneration)
+            {
+                return false;
+            }
+
+            if (!_loginController.IsUserLoggedIn)
+            {
+                return false;
+            }
+
+            return String.Equals(_loginController.UserInfo?.Email, userEmail, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsCurrentSyncSession(int sessionEpoch)
+        {
+            return sessionEpoch == _syncSessionEpoch && _loginController.IsUserLoggedIn;
+        }
+
+        private bool IsCurrentDiscovery(int sessionEpoch, int updateGeneration)
+        {
+            return IsCurrentSyncSession(sessionEpoch) && updateGeneration == _syncTargetsUpdateGeneration;
+        }
+
+        private static List<SyncTargetInfo> CloneSyncTargets(List<SyncTargetInfo> targets)
+        {
+            return targets == null ? new List<SyncTargetInfo>() : targets.ConvertAll(x => x.Clone());
+        }
+
+
+        private void ClearCachedSyncTargets()
+        {
+            Interlocked.Increment(ref _syncTargetsUpdateGeneration);
+            _cachedSyncTargets = null;
+            _cachedSyncTargetsUserEmail = null;
+            UserEmail = null;
+            PublishSyncTargetsTask(Task.FromResult(new List<SyncTargetInfo>()));
+            _ctags = new Dictionary<Guid, string>();
+        }
+
+        private void PublishSyncTargetsTask(Task<List<SyncTargetInfo>> task)
+        {
+            _syncTargetsTask = task;
+            var previous = Interlocked.Exchange(ref _syncTargetsReplaced, CreateSyncTargetsReplacedSource());
+            previous.TrySetResult(true);
+        }
+
+        private static TaskCompletionSource<bool> CreateSyncTargetsReplacedSource()
+        {
+            return new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+
+        private List<SyncTargetInfo> PreserveExistingContactTargetsIfAny(IReadOnlyList<SyncTargetInfo> cachedSyncTargetsSnapshot, IReadOnlyList<SyncTargetConfig> persistedConfigsSnapshot)
+        {
+            var preserved = new List<SyncTargetInfo>();
+
+            if (cachedSyncTargetsSnapshot != null)
+            {
+                foreach (var item in cachedSyncTargetsSnapshot)
+                {
+                    if (item.TargetType == SyncTargetType.Contacts)
+                    {
+                        preserved.Add(item.Clone());
+                    }
+                }
+            }
+
+            if (preserved.Count == 0)
+            {
+                var counter = 0;
+                foreach (var config in persistedConfigsSnapshot)
+                {
+                    if (!IsLikelyContactTargetUrl(config.Url))
+                    {
+                        continue;
+                    }
+
+                    preserved.Add(new SyncTargetInfo(config)
+                    {
+                        TargetType = SyncTargetType.Contacts,
+                        Name = String.Empty,
+                        Privileges = AccessPrivileges.None,
+                        IsPrimary = counter == 0
+                    });
+                    counter++;
+                }
+            }
+
+            if (preserved.Count == 0)
+            {
+                return preserved;
+            }
+
+            s_logger.Warn($"CardDAV discovery returned no address books; keeping {preserved.Count} existing contact sync target(s) to avoid config wipe.");
+
+            return preserved;
+        }
+
+        private void ResolveMissingContactNames(IEnumerable<SyncTargetInfo> syncTargets)
+        {
+            var session = ThisAddIn.Components?.OutlookApplication?.Session;
+            foreach (var item in syncTargets)
+            {
+                if (item.TargetType != SyncTargetType.Contacts)
+                {
+                    continue;
+                }
+
+                if (!String.IsNullOrEmpty(item.Name))
+                {
+                    item.Name = GetContactsResourceDisplayName(item.Name);
+                    continue;
+                }
+
+                var folderName = TryGetOutlookFolderName(session, item.Config.OutlookFolderEntryId, item.Config.OutlookFolderStoreId);
+                item.Name = !String.IsNullOrEmpty(folderName) ? folderName : Localization.Strings.SyncConfigWindow_ContactsDefaultName;
+            }
+        }
+
+        private static bool IsLikelyContactTargetUrl(string url)
+        {
+            return !String.IsNullOrEmpty(url)
+                   && url.IndexOf("/addressbook/", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string TryGetOutlookFolderName(Outlook.NameSpace session, string entryId, string storeId)
+        {
+            if (session == null || String.IsNullOrEmpty(entryId))
+                return null;
+
+            try
+            {
+                var folder = String.IsNullOrEmpty(storeId)
+                    ? session.GetFolderFromID(entryId)
+                    : session.GetFolderFromID(entryId, storeId);
+                
+                if (folder == null)
+                {
+                    return null;
+                }
+
+                using (var wrapper = GenericComObjectWrapper.Create(folder))
+                {
+                    return wrapper.Inner.Name;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+
+        private SyncTargetConfig GetSyncTargetConfig(Uri url, IReadOnlyDictionary<string, SyncTargetConfig> configsByUrl,
+            IReadOnlyDictionary<string, bool> activePrefs)
+        {
+            SyncTargetConfig config;
+            configsByUrl.TryGetValue(url.ToString(), out config);
+            config = config?.Clone();
+
             if (config == null)
             {
-                var prefActive = _syncPrefs.GetActive(UserEmail, url.ToString());
+                bool prefActive;
                 config = new SyncTargetConfig
                 {
                     Id = Guid.NewGuid(),
                     Url = url.ToString(),
-                    Active = prefActive ?? true
+                    Active = !activePrefs.TryGetValue(url.ToString(), out prefActive) || prefActive
                 };
             }
             else
             {
-                var prefActive = _syncPrefs.GetActive(UserEmail, config.Url);
-                if (prefActive.HasValue)
+                bool prefActive;
+                if (activePrefs.TryGetValue(config.Url, out prefActive))
                 {
-                    config.Active = prefActive.Value;
+                    config.Active = prefActive;
                 }
             }
 
@@ -563,11 +882,15 @@ namespace Y360OutlookConnector.Synchronization
             }
         }
 
-        private async Task RetryFailedEntities()
+        private async Task RetryFailedEntities(List<SyncTargetInfo> syncTargets)
         {
+            if (syncTargets == null)
+            {
+                return;
+            }
+
             try
             {
-                var syncTargets = await GetSyncTargets();
                 var activeSyncTargets = syncTargets.Where(s => s.Config.Active).ToList();
 
                 foreach(var syncTarget in activeSyncTargets)

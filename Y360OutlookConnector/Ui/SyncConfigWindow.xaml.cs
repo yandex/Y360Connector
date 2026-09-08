@@ -95,6 +95,25 @@ namespace Y360OutlookConnector.Ui
             }
         }
 
+        public static void CloseCurrent()
+        {
+            var instance = s_instance;
+            if (instance == null)
+            {
+                return;
+            }
+
+            if (instance.Dispatcher.CheckAccess())
+            {
+                instance.Close();
+            }
+            else
+            {
+                instance.Dispatcher.BeginInvoke(new Action(instance.Close));
+            }
+        }
+
+
         private void SyncConfigWindow_Closed(object sender, EventArgs e)
         {
             _syncManager.Status.SyncStateChanged -= SyncStatus_StateChanged;

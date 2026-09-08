@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using CalDavSynchronizer.DataAccess;
 using Y360OutlookConnector.Clients;
 
@@ -6,12 +6,22 @@ namespace Y360OutlookConnector.Synchronization
 {
     public static class SyncErrorHandler
     {
-        public static void HandleException(Exception exception, bool silent = true)
+        public static void HandleException(Exception exception, bool silent = true, Func<bool> shouldApply = null)
         {
+            if (!CanApply(shouldApply))
+            {
+                return;
+            }
+
             if (IsUnauthorizedError(exception))
             {
                 ThisAddIn.UiContext.Post((o) =>
                     {
+                        if (!CanApply(shouldApply))
+                        {
+                            return;
+                        }
+
                         if (!silent)
                             Ui.ErrorWindow.ShowError(Ui.ErrorWindow.ErrorType.Unauthorized);
                         ThisAddIn.Components?.LoginController.Logout();
@@ -22,6 +32,11 @@ namespace Y360OutlookConnector.Synchronization
             {
                 ThisAddIn.UiContext.Post((o) =>
                     {
+                        if (!CanApply(shouldApply))
+                        {
+                            return;
+                        }
+
                         if (!silent)
                             Ui.ErrorWindow.ShowError(Ui.ErrorWindow.ErrorType.ProxyError);
                         ThisAddIn.Components?.SyncStatus.SetCriticalError(CriticalError.ProxyConnectFailure);
@@ -32,6 +47,11 @@ namespace Y360OutlookConnector.Synchronization
             {
                 ThisAddIn.UiContext.Post((o) =>
                     {
+                        if (!CanApply(shouldApply))
+                        {
+                            return;
+                        }
+
                         if (!silent)
                             Ui.ErrorWindow.ShowError(Ui.ErrorWindow.ErrorType.ProxyError);
                         ThisAddIn.Components?.SyncStatus.SetCriticalError(CriticalError.ProxyAuthFailure);
@@ -42,6 +62,11 @@ namespace Y360OutlookConnector.Synchronization
             {
                 ThisAddIn.UiContext.Post((o) =>
                     {
+                        if (!CanApply(shouldApply))
+                        {
+                            return;
+                        }
+
                         if (!silent)
                             Ui.ErrorWindow.ShowError(Ui.ErrorWindow.ErrorType.NoInternet);
                         ThisAddIn.Components?.SyncStatus.SetCriticalError(CriticalError.NoInternet);
@@ -52,6 +77,11 @@ namespace Y360OutlookConnector.Synchronization
             {
                 ThisAddIn.UiContext.Post((o) =>
                     {
+                        if (!CanApply(shouldApply))
+                        {
+                            return;
+                        }
+
                         if (!silent)
                             Ui.ErrorWindow.ShowError(Ui.ErrorWindow.ErrorType.ServerError);
                         ThisAddIn.Components?.SyncStatus.SetCriticalError(CriticalError.ServerError);
@@ -59,7 +89,15 @@ namespace Y360OutlookConnector.Synchronization
                     null);
             }
 
-            ExceptionHandler.Instance.Unexpected(exception);
+            if (CanApply(shouldApply))
+            {
+                ExceptionHandler.Instance.Unexpected(exception);
+            }
+        }
+
+        private static bool CanApply(Func<bool> shouldApply)
+        {
+            return shouldApply == null || shouldApply();
         }
 
         public static bool IsUnauthorizedError(Exception exception)

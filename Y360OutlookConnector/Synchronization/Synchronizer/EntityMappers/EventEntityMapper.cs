@@ -2621,7 +2621,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             HashSet<Recipient> recipientsToDispose,
             IEntitySynchronizationLogger logger)
         {
-            var missingAttendees = CollectMissingExpectedAttendees(expectedAttendees, target, logger);
+            var missingAttendees = CollectMissingExpectedAttendees(expectedAttendees, target, indexByEmailAddresses, logger);
 
             if (missingAttendees.Count == 0)
             {
@@ -2642,11 +2642,9 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                     logger,
                     logActions: true,
                     actionPrefix: "repair-");
-
-                indexByEmailAddresses = GetOutlookRecipientsByEmailAddressesOrName(target, recipientsToDispose, logger);
             }
 
-            var stillMissing = CollectMissingExpectedAttendees(expectedAttendees, target, logger);
+            var stillMissing = CollectMissingExpectedAttendees(expectedAttendees, target, indexByEmailAddresses, logger);
             if (stillMissing.Count > 0)
             {
                 s_logger.Warn(
@@ -2660,6 +2658,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
         private List<Attendee> CollectMissingExpectedAttendees(
             IList<Attendee> expectedAttendees,
             AppointmentItem target,
+            Dictionary<string, Recipient> indexByEmailAddresses,
             IEntitySynchronizationLogger logger)
         {
             var missingAttendees = new List<Attendee>();
@@ -2668,10 +2667,26 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             {
                 var emailWithoutMailto = TryGetAttendeeEmailWithoutMailto(attendee, logger);
                 if (string.IsNullOrEmpty(emailWithoutMailto))
+                {
                     continue;
+                }
 
-                if (TryFindRecipientByEmail(target, emailWithoutMailto, logger) == null)
+                var comparisonKey = EmailAddress.GetComparisonKey(emailWithoutMailto);
+                var foundInIndex = !string.IsNullOrEmpty(comparisonKey) && indexByEmailAddresses.ContainsKey(comparisonKey);
+                if (!foundInIndex)
+                {
+                    var emailFromName = TryExtractEmailFromRecipientName(emailWithoutMailto);
+                    if (!string.IsNullOrEmpty(emailFromName))
+                    {
+                        var keyFromName = EmailAddress.GetComparisonKey(emailFromName);
+                        foundInIndex = !string.IsNullOrEmpty(keyFromName) && indexByEmailAddresses.ContainsKey(keyFromName);
+                    }
+                }
+
+                if (!foundInIndex)
+                {
                     missingAttendees.Add(attendee);
+                }
             }
 
             return missingAttendees;
@@ -2894,12 +2909,19 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             {
                 var emailWithoutMailto = attendeeEmail.Substring(s_mailtoSchemaLength);
                 logEmail = emailWithoutMailto;
-                targetRecipient = TryFindRecipientByEmail(target, emailWithoutMailto, logger);
-                if (targetRecipient != null)
+                var comparisonKey= EmailAddress.GetComparisonKey(emailWithoutMailto);
+                if (!string.IsNullOrEmpty(comparisonKey))
                 {
-                    action = "reused";
+                    indexByEmailAddresses.TryGetValue(comparisonKey, out targetRecipient);
                 }
-                else if (indexByEmailAddresses.TryGetValue(attendeeEmail, out targetRecipient))
+                else
+                {
+                    // comparisonKey couldn't be built (unparseable address) - the index
+                    // can't help here, fall back to a linear scan for this rare case only.
+                    targetRecipient = TryFindRecipientByEmail(target, emailWithoutMailto, logger);
+                }
+
+                if (targetRecipient != null)
                 {
                     action = "reused";
                 }
@@ -2909,6 +2931,7 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
                         emailWithoutMailto, attendee.CommonName);
 
                     targetRecipient = target.Recipients.Add(recipientName);
+                    AddRecipientEmailToIndex(indexByEmailAddresses, targetRecipient, emailWithoutMailto);
                     action = "added";
                 }
             }
@@ -3026,22 +3049,29 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
 
         private Dictionary<string, Recipient> GetOutlookRecipientsByEmailAddressesOrName(AppointmentItem appointment, HashSet<Recipient> disposeList, IEntitySynchronizationLogger logger)
         {
-            Dictionary<string, Recipient> indexByEmailAddresses = new Dictionary<string, Recipient>(StringComparer.InvariantCultureIgnoreCase);
+            var indexByEmailAddresses = new Dictionary<string, Recipient>(StringComparer.OrdinalIgnoreCase);
 
             foreach (Recipient recipient in appointment.Recipients)
             {
                 disposeList.Add(recipient);
-                if (!string.IsNullOrEmpty(recipient.Address))
+                try
                 {
-                    using (var entryWrapper = GenericComObjectWrapper.Create(recipient.AddressEntry))
+                    if (recipient.Resolve())
                     {
-                        indexByEmailAddresses[GetMailUrlOrNull(entryWrapper.Inner, recipient.Address, logger) ?? recipient.Name] = recipient;
+                        using (var entryWrapper = GenericComObjectWrapper.Create(recipient.AddressEntry))
+                        {
+                            AddRecipientEmailToIndex(indexByEmailAddresses, recipient,
+                                OutlookUtility.GetEmailAdressOrNull(entryWrapper.Inner, logger, s_logger));
+                        }
                     }
                 }
-                else
+                catch (COMException)
                 {
-                    indexByEmailAddresses[recipient.Name] = recipient;
+                    // Keep indexing fallback values from Address and Name.
                 }
+
+                AddRecipientEmailToIndex(indexByEmailAddresses, recipient, recipient.Address);
+                AddRecipientEmailToIndex(indexByEmailAddresses, recipient, recipient.Name);
             }
 
             return indexByEmailAddresses;
@@ -3538,6 +3568,38 @@ namespace Y360OutlookConnector.Synchronization.EntityMappers
             }
 
             return null;
+        }
+
+        private static void AddRecipientEmailToIndex(
+            IDictionary<string, Recipient> indexByEmailAddresses,
+            Recipient recipient,
+            string emailCandidate)
+        {
+            if (string.IsNullOrEmpty(emailCandidate))
+            {
+                return;
+            }
+
+            string email;
+            if (emailCandidate.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+            {
+                email = emailCandidate.Substring(s_mailtoSchemaLength);
+            }
+            else
+            {
+                email = TryExtractEmailFromRecipientName(emailCandidate);
+            }
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return;
+            }
+
+            var comparisonKey = EmailAddress.GetComparisonKey(email);
+            if (!string.IsNullOrEmpty(comparisonKey) && !indexByEmailAddresses.ContainsKey(comparisonKey))
+            {
+                indexByEmailAddresses.Add(comparisonKey, recipient);
+            }
         }
     }
 }

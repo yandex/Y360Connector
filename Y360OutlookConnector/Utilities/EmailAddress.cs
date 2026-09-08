@@ -50,6 +50,38 @@ namespace Y360OutlookConnector.Utilities
             return result;
         }
 
+        public static string GetComparisonKey(string email)
+        {
+            if (String.IsNullOrEmpty(email))
+            {
+                return String.Empty;
+            }
+
+            if (_userEmailService != null)
+            {
+                try
+                {
+                    if (_userEmailService.IsUserEmail(email))
+                    {
+                        return "\u0001current-user";
+                    }
+
+                    var normalized = Parse(email.Trim()).Normalize();
+                    return String.IsNullOrEmpty(normalized.NameId) || String.IsNullOrEmpty(normalized.Domain)
+                        ? String.Empty : normalized.NameId.ToLowerInvariant() + "@" + normalized.Domain.ToLowerInvariant();
+                }
+                catch (Exception ex)
+                {
+                    s_logger.Error("Failed to build email comparison key via UserEmailService", ex);
+                }
+            }
+
+            var parsed = Parse(email.Trim().Normalize());
+            return String.IsNullOrEmpty(parsed.NameId) || String.IsNullOrEmpty(parsed.Domain)
+                ? String.Empty : parsed.NameId.ToLowerInvariant() + "@" + parsed.Domain.ToLowerInvariant();
+        }
+
+
         public static bool AreSame(EmailAddress email1, EmailAddress email2)
         {
             if (email1 == null || email2 == null)
