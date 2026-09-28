@@ -795,6 +795,82 @@ namespace Y360OutlookConnector.Synchronization
                    && url.IndexOf("/addressbook/", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
+        private static string GetAddressBookLeafSegment(string url)
+        {
+            if (String.IsNullOrEmpty(url))
+            {
+                return null;
+            }
+
+            Uri uri;
+            string path;
+            if (Uri.TryCreate(url, UriKind.Absolute, out uri))
+            {
+                path = uri.AbsolutePath;
+            }
+            else
+            {
+                path = url;
+            }
+
+            path = path.TrimEnd('/');
+            if (String.IsNullOrEmpty(path))
+            {
+                return null;
+            }
+
+            var slash = path.LastIndexOf('/');
+            var segment = slash >= 0 ? path.Substring(slash + 1) : path;
+            if (String.IsNullOrEmpty(segment))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Uri.UnescapeDataString(segment);
+            }
+            catch (UriFormatException)
+            {
+                return segment;
+            }
+        }
+
+        private static bool IsOrganizationContactsBookUrl(string url)
+        {
+            var segment = GetAddressBookLeafSegment(url);
+            if (String.IsNullOrEmpty(segment))
+            {
+                return false;
+            }
+
+            if (String.Equals(segment, "1", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (segment.StartsWith("user:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (segment.StartsWith("organization:", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < segment.Length; i++)
+            {
+                if (segment[i] < '0' || segment[i] > '9')
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+
         private static string TryGetOutlookFolderName(Outlook.NameSpace session, string entryId, string storeId)
         {
             if (session == null || String.IsNullOrEmpty(entryId))
@@ -943,12 +1019,9 @@ namespace Y360OutlookConnector.Synchronization
 
                 s_logger.Info($"RestoreContactsFromServerAsync: total sync targets='{syncTargets.Count}'");
 
-                var sharedName = Localization.Strings.SyncConfigWindow_SharedContactsName;
-                var externalName = Localization.Strings.SyncConfigWindow_ExternalContactsName;
-
                 var contactTargets = syncTargets.Where(s => s.TargetType == SyncTargetType.Contacts &&
                                                           s.Config.Active &&
-                                                          (s.Name == sharedName || s.Name == externalName)).ToList();
+                                                          IsOrganizationContactsBookUrl(s.Config.Url)).ToList();
 
                 foreach (var syncTarget in contactTargets)
                 {
@@ -971,13 +1044,9 @@ namespace Y360OutlookConnector.Synchronization
                 return Enumerable.Empty<SyncTargetInfo>();
             }
 
-            var sharedName = Localization.Strings.SyncConfigWindow_SharedContactsName;
-            var externalName = Localization.Strings.SyncConfigWindow_ExternalContactsName;
-
             return _cachedSyncTargets.Where(target =>
                 target.TargetType == SyncTargetType.Contacts &&
-                (String.Equals(target.Name, sharedName, StringComparison.OrdinalIgnoreCase) ||
-                 String.Equals(target.Name, externalName, StringComparison.OrdinalIgnoreCase)));
+                IsOrganizationContactsBookUrl(target.Config.Url));
         }
 
         public bool IsSharedOrExternalContactsFolder(string outlookFolderEntryId, string outlookFolderStoreId)
